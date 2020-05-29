@@ -32,25 +32,25 @@ Run a Node.js app in a container built from the current directory:
 kudo . npm start
 ```
 
-Run the default command in a container built from the current directory that inherits configuration from the first container defined by the pod template in the "todo-app" deployment spec:
+Run the default command in a container built from the current directory that inherits configuration from the first container defined by the pod template in the `todo-app` deployment spec:
 
 ```
 kudo -c deployment/todo-app .
 ```
 
-Run a command shell in a container built from the current directory that inherits existing configuration from the first container defined by the first pod selected by the "todo-app" service, and also push any changes in the current directory to the container's "/app" directory:
+Run a command shell in a container built from the current directory that inherits existing configuration from the first container defined by the first pod selected by the `todo-app` service, and also push any changes in the current directory to the container's `/app` directory:
 
 ```
 kudo -c service/todo-app -s .:/app -it . sh
 ```
 
-Debug a Node.js app in a container built from the current directory that inherits existing configuration from the first container defined by the todo-app-56db-xdhfx pod, and forward TCP connections made to local ports 8080 and 9229 to container ports 80 and 9229 respectively:
+Debug a Node.js app in a container built from the current directory that inherits existing configuration from the first container defined by the `todo-app-56db-xdhfx` pod, and forward TCP connections made to local ports `8080` and `9229` to container ports `80` and `9229` respectively:
 
 ```
 kudo -c todo-app-56db-xdhfx -p 8080:80 -p 9229:9229 . node --inspect-brk=0.0.0.0:9229 server.js
 ```
 
-Run the default command in a "kudo-samples/todo-app" container that inherits its configuration from the "web" container defined by the pod template in the "todo-app" deployment spec, and also overlay any existing pods produced by that same deployment:
+Run the default command in a `kudo-samples/todo-app` container that inherits its configuration from the `web` container defined by the pod template in the `todo-app` deployment spec, and also overlay any existing pods produced by that same deployment:
 
 ```
 kudo -c deployment/todo-app:web -R kudo-samples/todo-app
@@ -58,7 +58,7 @@ kudo -c deployment/todo-app:web -R kudo-samples/todo-app
 
 ## Usage
 
-Kudo is a single command CLI that can be called a small number of unique ways:
+Kudo is a single command CLI that can be called in a small number of unique ways:
 
 ```
 kudo [flags] image [command] [args...]
@@ -89,7 +89,7 @@ Flag | Default | Description
 
 ### Installation flags
 
-These flags are used to manage the kudo server components. These are installed into the `kube-system` namespace as a daemon set, so these flags require administrative access to the cluster.
+These flags are used to manage the kudo server components. These components are installed into the `kube-system` namespace as a daemon set, so using these flags require administrative access to the cluster.
 
 Flag | Description
 ---- | -----------
@@ -117,11 +117,11 @@ Flag | Default | Description
 `--build-arg` | `[]` | build-time variables in the form `name=value`
 `--build-target` | `<empty>` | dockerfile target to build
 
-When the `docker` CLI is invoked, it does not use the default configured Docker daemon. Instead, it uses the kudo server components to directly access the Docker daemon running on a node in the Kubernetes cluster. Therefore, it is theoretically not a requirement that the local machine is actually running Docker, although in most cases (e.g. Docker Desktop) this will be the case.
+When the `docker` CLI is invoked, it does not use the default configured Docker daemon. Instead, it uses the kudo server components to directly access the Docker daemon running on a node in the Kubernetes cluster. Therefore, it is theoretically not a requirement that the local machine is actually running Docker, although in most cases (e.g. Docker Desktop) this will be the case. It **is**, however, a requirement that the node on which the kudo pod is scheduled is using Docker for its container runtime and the Docker daemon socket at `/var/run/docker.sock` on the host can be volume mounted into the pod.
 
-### Container flags
+### Runtime flags
 
-These flags customize the container that runs the command.
+These flags customize the pod and container that runs the command.
 
 Flag | Default | Description
 ---- | ------- | -----------
@@ -135,7 +135,7 @@ Flag | Default | Description
 `-p, --forward` | `[]` | forward local ports to container ports in the form `local:remote`
 `-l, --listen` | `[]` | forward container ports to local ports in the form `remote:local`
 
-The `-c, --inherit` flag inherits an existing configuration from a container specification identified in the form `[kind/]name[:container]` where `kind` is a Kubernetes workload kind (`cronjob`, `daemonset`, `deployment`, `job`, `pod`, `replicaset`, `replicationcontroller` or `statefulset`) or `service` (default is `pod`). If the `kind` is not `pod`, the pod spec is based on the template in the outer spec. If `container` is not specified, the first container in the pod spec is selected. Init containers are not supported.
+The `-c, --inherit` flag inherits an existing configuration from a container specification identified in the form `[kind/]name[:container]`, where `kind` is a Kubernetes workload kind (`cronjob`, `daemonset`, `deployment`, `job`, `pod`, `replicaset`, `replicationcontroller` or `statefulset`) or `service` (default is `pod`). If the `kind` is not `pod`, the pod spec is based on the template in the outer spec. If `container` is not specified, the first container in the pod spec is selected. Init containers are not supported.
 
 Note that even when inheriting an existing configuration, pod labels and annotations are *not* inherited to prevent the cluster from misunderstanding the role of the pod (for instance, automatically being added as an instance behind a service). The `--label` and `--annotate` flags can be used to re-add any labels and annotations that should still be included for the pod to function properly.
 
