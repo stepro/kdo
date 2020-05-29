@@ -1,0 +1,84 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "install",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "options": {
+                "cwd": "${workspaceRoot}/cli/kudo"
+            },
+            "command": "go",
+            "args": [
+                "install",
+                "-v"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build",
+            "dependsOn": [
+                "build-darwin",
+                "build-linux",
+                "build-windows"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build-darwin",
+            "options": {
+                "cwd": "${workspaceRoot}/cli/kudo",
+                "env": {
+                    "GOOS": "darwin",
+                    "GOARCH": "amd64"
+                }
+            },
+            "command": "go",
+            "args": [
+                "build",
+                "-o",
+                "bin/darwin/amd64/kudo",
+                "-v"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build-linux",
+            "options": {
+                "cwd": "${workspaceRoot}/cli/kudo",
+                "env": {
+                    "GOOS": "linux",
+                    "GOARCH": "amd64"
+                }
+            },
+            "command": "go",
+            "args": [
+                "build",
+                "-o",
+                "bin/linux/amd64/kudo",
+                "-v"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build-windows",
+            "options": {
+                "cwd": "${workspaceRoot}/cli/kudo",
+                "env": {
+                    "GOOS": "windows",
+                    "GOARCH": "amd64"
+                }
+            },
+            "command": "go",
+            "args": [
+                "build",
+                "-o",
+                "bin/windows/amd64/kudo.exe",
+                "-v"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
