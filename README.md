@@ -1,4 +1,4 @@
-# Kudo: sudo for Kubernetes
+# <img src="images/logo.png" width="36"> Kudo: sudo for Kubernetes
 [![Build](https://img.shields.io/github/workflow/status/stepro/kudo/Kudo)](https://github.com/stepro/kudo/actions?query=workflow%3AKudo)
 [![Feature Requests](https://img.shields.io/github/issues/stepro/kudo/feature-request.svg)](https://github.com/stepro/kudo/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc)
 [![Bugs](https://img.shields.io/github/issues/stepro/kudo/bug.svg)](https://github.com/stepro/kudo/issues?q=is%3Aopen+is%3Aissue+label%3Abug)
