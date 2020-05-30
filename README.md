@@ -1,4 +1,5 @@
 # Kudo: sudo for Kubernetes
+[![Build](https://img.shields.io/github/workflow/status/stepro/kudo/Kudo)](https://github.com/stepro/kudo/actions?query=workflow%3AKudo)
 [![Feature Requests](https://img.shields.io/github/issues/stepro/kudo/feature-request.svg)](https://github.com/stepro/kudo/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc)
 [![Bugs](https://img.shields.io/github/issues/stepro/kudo/bug.svg)](https://github.com/stepro/kudo/issues?q=is%3Aopen+is%3Aissue+label%3Abug)
 
@@ -10,7 +11,7 @@ Kudo is designed primarily for development scenarios where you want to observe h
 
 Kudo requires the `kubectl` CLI to communicate with a Kubernetes cluster and the `docker` CLI to orchestrate dynamic image builds, so first make sure you have these installed and available in your PATH. Then, download the latest [release](https://github.com/stepro/kudo/releases) for your platform, and add the `kudo` binary to your PATH.
 
-By default `kudo` utilizes the current `kubectl` context, so point it at the Kubernetes cluster of your choice and you're good to go.
+By default `kudo` utilizes the current `kubectl` context, so point it at the Kubernetes cluster of your choice and you're good to go!
 
 ## Examples
 
