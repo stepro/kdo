@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/microsoft/kudo/pkg/kubectl"
-	"github.com/microsoft/kudo/pkg/output"
+	"github.com/stepro/kudo/pkg/kubectl"
+	"github.com/stepro/kudo/pkg/output"
 )
 
 var manifest = `

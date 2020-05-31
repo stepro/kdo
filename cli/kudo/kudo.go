@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/microsoft/kudo/pkg/docker"
-	"github.com/microsoft/kudo/pkg/filesync"
-	"github.com/microsoft/kudo/pkg/kubectl"
-	"github.com/microsoft/kudo/pkg/output"
-	"github.com/microsoft/kudo/pkg/pod"
-	"github.com/microsoft/kudo/pkg/server"
 	"github.com/spf13/cobra"
+	"github.com/stepro/kudo/pkg/docker"
+	"github.com/stepro/kudo/pkg/filesync"
+	"github.com/stepro/kudo/pkg/kubectl"
+	"github.com/stepro/kudo/pkg/output"
+	"github.com/stepro/kudo/pkg/pod"
+	"github.com/stepro/kudo/pkg/server"
 )
 
 var cmd = &cobra.Command{

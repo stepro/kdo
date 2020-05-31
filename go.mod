@@ -1,4 +1,4 @@
-module github.com/microsoft/kudo
+module github.com/stepro/kudo
 
 go 1.12
 

@@ -3,8 +3,8 @@ package docker
 import (
 	"os/exec"
 
-	"github.com/microsoft/kudo/pkg/command"
-	"github.com/microsoft/kudo/pkg/output"
+	"github.com/stepro/kudo/pkg/command"
+	"github.com/stepro/kudo/pkg/output"
 )
 
 // Options represents global options for the docker CLI

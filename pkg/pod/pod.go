@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/microsoft/kudo/pkg/kubectl"
-	"github.com/microsoft/kudo/pkg/output"
-	"github.com/microsoft/kudo/pkg/server"
+	"github.com/stepro/kudo/pkg/kubectl"
+	"github.com/stepro/kudo/pkg/output"
+	"github.com/stepro/kudo/pkg/server"
 )
 
 func track(k *kubectl.CLI, pod string, op output.Operation) func() {
