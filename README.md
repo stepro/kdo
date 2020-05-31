@@ -186,10 +186,13 @@ These flags customize how the command is run.
 Flag | Default | Description
 ---- | ------- | -----------
 `-x, --exec` | `false` | execute command in an existing pod
+`-k, --prekill` | `[]` | kill existing processes prior to an exec
 `-i, --stdin` | `false` | connect standard input to the container
 `-t, --tty` | `false` | allocate a pseudo-TTY in the container
 
-When using the `-x, --exec` flag, build, configuration and session flags are ignored with the exception of the `-c, --inherit` flag which is used to help identify the target container. Additionally, this flag cannot be combined with the `-d, --detach` or `--delete` flags.
+When using the `-x, --exec` flag, build, configuration and session flags are ignored with the exception of the `-c, --inherit` flag which is used to help identify the target container, and the `-p, --forward` flag. Additionally, this flag cannot be combined with the `-d, --detach` or `--delete` flags.
+
+The `-k, --prekill` flag can be used with the `-x, --exec` flag to pre-kill existing processes by name that may be running in the container. This requires the `pkill` command in the container, and it sends a SIGKILL to all processes matching the specified flag values.
 
 ### Detached pod flags
 

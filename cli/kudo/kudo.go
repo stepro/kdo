@@ -100,9 +100,10 @@ var flags struct {
 		listen []string
 	}
 	command struct {
-		exec  bool
-		stdin bool
-		tty   bool
+		exec    bool
+		prekill []string
+		stdin   bool
+		tty     bool
 	}
 	detach bool
 	delete bool
@@ -184,6 +185,8 @@ func init() {
 	// Command flags
 	cmd.Flags().BoolVarP(&flags.command.exec,
 		"exec", "x", false, "execute command in an existing container")
+	cmd.Flags().StringArrayVarP(&flags.command.prekill,
+		"prekill", "k", nil, "kill existing processes prior to an exec")
 	cmd.Flags().BoolVarP(&flags.command.stdin,
 		"stdin", "i", false, "connect standard input to the container")
 	cmd.Flags().BoolVarP(&flags.command.tty,
@@ -240,6 +243,24 @@ func init() {
 	})
 }
 
+func forwardPorts(k *kubectl.CLI, pod string) (func(), error) {
+	var hasForwardedPorts bool
+	portsForwarded := make(chan bool)
+	portForwardEnded := make(chan error)
+	stop := k.StartLines(append([]string{"port-forward", pod}, flags.session.ports...), func(line string) {
+		if !hasForwardedPorts && strings.HasPrefix(line, "Forwarding from 127.0.0.1:") {
+			hasForwardedPorts = true
+			portsForwarded <- true
+		}
+	}, portForwardEnded)
+	select {
+	case err := <-portForwardEnded:
+		return nil, err
+	case <-portsForwarded:
+		return stop, nil
+	}
+}
+
 func run(cmd *cobra.Command, args []string) error {
 	var k = kubectl.NewCLI(
 		flags.kubectl.path,
@@ -269,6 +290,9 @@ func run(cmd *cobra.Command, args []string) error {
 		if flags.detach {
 			return errors.New("Cannot combine sync, forward or listen flags with detach flag")
 		}
+	}
+	if !flags.command.exec && len(flags.command.prekill) > 0 {
+		return errors.New("Can only use prekill flag with exec flag")
 	}
 	if flags.command.exec && flags.detach {
 		return errors.New("Cannot combine exec and detach flags")
@@ -306,6 +330,18 @@ func run(cmd *cobra.Command, args []string) error {
 			container = nameContainer[1]
 		}
 		execArgs = append(execArgs, container)
+		if len(flags.command.prekill) > 0 {
+			killArgs := append(execArgs, "--", "pkill", "-9")
+			killArgs = append(killArgs, flags.command.prekill...)
+			k.Run(killArgs...)
+		}
+		if len(flags.session.ports) > 0 {
+			stop, err := forwardPorts(k, "kudo-"+hash)
+			if err != nil {
+				return err
+			}
+			defer stop()
+		}
 		if flags.command.stdin {
 			execArgs = append(execArgs, "--stdin")
 		}
@@ -419,22 +455,12 @@ func run(cmd *cobra.Command, args []string) error {
 
 	if len(flags.session.ports) > 0 {
 		op := out.Start("Forwarding ports")
-		var hasForwardedPorts bool
-		portsForwarded := make(chan bool)
-		portForwardEnded := make(chan error)
-		stop := k.StartLines(append([]string{"port-forward", p.Pod}, flags.session.ports...), func(line string) {
-			if !hasForwardedPorts && strings.HasPrefix(line, "Forwarding from 127.0.0.1:") {
-				hasForwardedPorts = true
-				portsForwarded <- true
-			}
-		}, portForwardEnded)
-		select {
-		case err := <-portForwardEnded:
+		stop, err := forwardPorts(k, p.Pod)
+		if err != nil {
 			op.Failed()
 			return err
-		case <-portsForwarded:
-			op.Done()
 		}
+		op.Done()
 		defer stop()
 	}
 
