@@ -68,11 +68,6 @@ var examples = strings.Trim(`
   kudo -c deployment/todo-app:web -R kudo-samples/todo-app
 `, "\r\n")
 
-func fatal(err error) {
-	fmt.Fprintf(os.Stderr, fmt.Sprintf("Fatal error: %v", err))
-	os.Exit(1)
-}
-
 var flags struct {
 	kubectl struct {
 		path string
@@ -90,31 +85,43 @@ var flags struct {
 		args   []string
 		target string
 	}
-	inherit     string
-	labels      []string
-	annotations []string
-	noLifecycle bool
-	noProbes    bool
-	env         []string
-	sync        []string
-	ports       []string
-	listen      []string
-	replace     bool
-	command     struct {
+	config struct {
+		inherit     string
+		labels      []string
+		annotations []string
+		noLifecycle bool
+		noProbes    bool
+		env         []string
+		replace     bool
+	}
+	session struct {
+		sync   []string
+		ports  []string
+		listen []string
+	}
+	command struct {
+		exec  bool
 		stdin bool
 		tty   bool
 	}
-	detach  bool
-	delete  bool
-	quiet   bool
-	verbose bool
-	debug   bool
+	detach bool
+	delete bool
+	output struct {
+		quiet   bool
+		verbose bool
+		debug   bool
+	}
 }
 
 var out *output.Interface
 
+func fatal(err error) {
+	fmt.Fprintf(os.Stderr, fmt.Sprintf("Fatal error: %v", err))
+	os.Exit(1)
+}
+
 func init() {
-	// Kubernetes options
+	// Kubernetes flags
 	cmd.Flags().StringVar(&flags.kubectl.path,
 		"kubectl", "kubectl", "path to the kubectl CLI")
 	cmd.Flags().StringVar(&flags.kubectl.Kubeconfig,
@@ -126,17 +133,17 @@ func init() {
 	cmd.Flags().IntVar(&flags.kubectl.Verbosity,
 		"kubectl-v", 0, "the kubectl log level verbosity")
 
-	// Installation options
+	// Installation flags
 	cmd.Flags().BoolVar(&flags.install,
 		"install", false, "install server components and exit")
 	cmd.Flags().BoolVar(&flags.uninstall,
 		"uninstall", false, "uninstall server components and exit")
 
-	// Scope options
+	// Scope flag
 	cmd.Flags().StringVar(&flags.scope,
 		"scope", "", "scoping identifier for images and pods")
 
-	// Build options
+	// Build flags
 	cmd.Flags().StringVar(&flags.build.docker.path,
 		"docker", "docker", "path to the docker CLI")
 	cmd.Flags().StringVar(&flags.build.docker.Config,
@@ -150,51 +157,53 @@ func init() {
 	cmd.Flags().StringVar(&flags.build.target,
 		"build-target", "", "dockerfile target to build")
 
-	// Container options
-	cmd.Flags().StringVarP(&flags.inherit,
+	// Configuration flags
+	cmd.Flags().StringVarP(&flags.config.inherit,
 		"inherit", "c", "", "inherit an existing configuration")
-	cmd.Flags().StringArrayVar(&flags.labels,
+	cmd.Flags().StringArrayVar(&flags.config.labels,
 		"label", nil, "set pod labels (never inherited)")
-	cmd.Flags().StringArrayVar(&flags.annotations,
+	cmd.Flags().StringArrayVar(&flags.config.annotations,
 		"annotate", nil, "set pod annotations (never inherited)")
-	cmd.Flags().BoolVar(&flags.noLifecycle,
+	cmd.Flags().BoolVar(&flags.config.noLifecycle,
 		"no-lifecycle", false, "do not inherit lifecycle configuration")
-	cmd.Flags().BoolVar(&flags.noProbes,
+	cmd.Flags().BoolVar(&flags.config.noProbes,
 		"no-probes", false, "do not inherit probes configuration")
-	cmd.Flags().StringArrayVarP(&flags.env,
+	cmd.Flags().StringArrayVarP(&flags.config.env,
 		"env", "e", nil, "set container environment variables")
-	cmd.Flags().StringArrayVarP(&flags.sync,
-		"sync", "s", nil, "push local file changes to the container")
-	cmd.Flags().StringArrayVarP(&flags.ports,
-		"forward", "p", nil, "forward local ports to container ports")
-	cmd.Flags().StringArrayVarP(&flags.listen,
-		"listen", "l", nil, "forward container ports to local ports")
-
-	// Replacement options
-	cmd.Flags().BoolVarP(&flags.replace,
+	cmd.Flags().BoolVarP(&flags.config.replace,
 		"replace", "R", false, "overlay inherited configuration's workload")
 
-	// Command options
+	// Session flags
+	cmd.Flags().StringArrayVarP(&flags.session.sync,
+		"sync", "s", nil, "push local file changes to the container")
+	cmd.Flags().StringArrayVarP(&flags.session.ports,
+		"forward", "p", nil, "forward local ports to container ports")
+	cmd.Flags().StringArrayVarP(&flags.session.listen,
+		"listen", "l", nil, "forward container ports to local ports")
+
+	// Command flags
+	cmd.Flags().BoolVarP(&flags.command.exec,
+		"exec", "x", false, "execute command in an existing container")
 	cmd.Flags().BoolVarP(&flags.command.stdin,
 		"stdin", "i", false, "connect standard input to the container")
 	cmd.Flags().BoolVarP(&flags.command.tty,
 		"tty", "t", false, "allocate a pseudo-TTY in the container")
 
-	// Detached pod options
+	// Detached pod flags
 	cmd.Flags().BoolVarP(&flags.detach,
 		"detach", "d", false, "run pod in the background")
 	cmd.Flags().BoolVar(&flags.delete,
 		"delete", false, "delete a previously detached pod")
 
-	// Output options
-	cmd.Flags().BoolVarP(&flags.quiet,
+	// Output flags
+	cmd.Flags().BoolVarP(&flags.output.quiet,
 		"quiet", "q", false, "output no information")
-	cmd.Flags().BoolVarP(&flags.verbose,
+	cmd.Flags().BoolVarP(&flags.output.verbose,
 		"verbose", "v", false, "output more information")
-	cmd.Flags().BoolVar(&flags.debug,
+	cmd.Flags().BoolVar(&flags.output.debug,
 		"debug", false, "output debug information")
 
-	// Other options
+	// Other flags
 	cmd.Flags().Bool(
 		"version", false, "show version information")
 	cmd.Flags().Bool(
@@ -217,13 +226,13 @@ func init() {
 		}
 
 		var level output.Level
-		if flags.quiet {
+		if flags.output.quiet {
 			level = output.LevelQuiet
 		} else {
-			if flags.verbose {
+			if flags.output.verbose {
 				level = output.LevelVerbose
 			}
-			if flags.debug {
+			if flags.output.debug {
 				level = output.LevelDebug
 			}
 		}
@@ -256,8 +265,16 @@ func run(cmd *cobra.Command, args []string) error {
 		return server.Uninstall(k, out)
 	}
 
-	if (len(flags.sync) > 0 || len(flags.ports) > 0 || len(flags.listen) > 0) && flags.detach {
-		return errors.New("Cannot combine sync, forward or listen flags with detach flag")
+	if len(flags.session.sync) > 0 || len(flags.session.ports) > 0 || len(flags.session.listen) > 0 {
+		if flags.detach {
+			return errors.New("Cannot combine sync, forward or listen flags with detach flag")
+		}
+	}
+	if flags.command.exec && flags.detach {
+		return errors.New("Cannot combine exec and detach flags")
+	}
+	if flags.command.exec && flags.delete {
+		return errors.New("Cannot combine exec and delete flags")
 	}
 	if flags.detach && flags.delete {
 		return errors.New("Cannot combine detach and delete flags")
@@ -271,8 +288,34 @@ func run(cmd *cobra.Command, args []string) error {
 	dirOrImage = args[0]
 	args = args[1:]
 
-	hash := fmt.Sprintf("%s\n%s\n%s", flags.scope, dirOrImage, flags.inherit)
+	// TODO: use absolute path for dirOrImage
+	hash := fmt.Sprintf("%s\n%s\n%s", flags.scope, dirOrImage, flags.config.inherit)
 	hash = fmt.Sprintf("%x", sha1.Sum([]byte(hash)))[:16]
+
+	if flags.command.exec {
+		execArgs := []string{"exec", "kudo-" + hash, "--container"}
+		var container string
+		inherit := strings.SplitN(flags.config.inherit, "/", 2)
+		if len(inherit) > 1 {
+			inherit = []string{inherit[1]}
+		}
+		nameContainer := strings.SplitN(inherit[0], ":", 2)
+		if len(nameContainer) == 1 {
+			container = nameContainer[0]
+		} else {
+			container = nameContainer[1]
+		}
+		execArgs = append(execArgs, container)
+		if flags.command.stdin {
+			execArgs = append(execArgs, "--stdin")
+		}
+		if flags.command.tty {
+			execArgs = append(execArgs, "--tty")
+		}
+		execArgs = append(execArgs, "--")
+		execArgs = append(execArgs, args...)
+		return k.Exec(execArgs...)
+	}
 
 	if flags.delete {
 		return pod.Delete(k, hash, out)
@@ -337,10 +380,10 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	p, err := pod.Apply(k, hash, build, &pod.Settings{
-		Inherit: flags.inherit,
+		Inherit: flags.config.inherit,
 		Image:   image,
-		Env:     flags.env,
-		Listen:  len(flags.listen) > 0,
+		Env:     flags.config.env,
+		Listen:  len(flags.session.listen) > 0,
 		Stdin:   flags.command.stdin,
 		TTY:     flags.command.tty,
 		Command: args,
@@ -357,7 +400,7 @@ func run(cmd *cobra.Command, args []string) error {
 		pod.Delete(k, hash, out)
 	}()
 
-	if dir != "" && len(flags.sync) > 0 {
+	if dir != "" && len(flags.session.sync) > 0 {
 		// TODO
 		if err = filesync.Watch(dir, func(added []string, updated []string, deleted []string) {
 			for _, path := range added {
@@ -374,12 +417,12 @@ func run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if len(flags.ports) > 0 {
+	if len(flags.session.ports) > 0 {
 		op := out.Start("Forwarding ports")
 		var hasForwardedPorts bool
 		portsForwarded := make(chan bool)
 		portForwardEnded := make(chan error)
-		stop := k.StartLines(append([]string{"port-forward", p.Pod}, flags.ports...), func(line string) {
+		stop := k.StartLines(append([]string{"port-forward", p.Pod}, flags.session.ports...), func(line string) {
 			if !hasForwardedPorts && strings.HasPrefix(line, "Forwarding from 127.0.0.1:") {
 				hasForwardedPorts = true
 				portsForwarded <- true
@@ -395,7 +438,7 @@ func run(cmd *cobra.Command, args []string) error {
 		defer stop()
 	}
 
-	if len(flags.listen) > 0 {
+	if len(flags.session.listen) > 0 {
 		// TODO
 	}
 

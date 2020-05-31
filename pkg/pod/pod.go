@@ -369,6 +369,7 @@ func Delete(k *kubectl.CLI, hash string, out *output.Interface) error {
 
 // DeleteAll deletes all pods associated with hashes
 func DeleteAll(k *kubectl.CLI, out *output.Interface) error {
+	// TODO: across all namespaces
 	return out.Do("Deleting pods", func() error {
 		return k.Run("delete", "pod", "-l", "kudo-pod=1")
 	})
