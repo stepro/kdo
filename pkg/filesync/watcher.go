@@ -10,14 +10,15 @@ import (
 )
 
 type fileinfo struct {
-	path    string
-	modTime time.Time
+	path string
+	mode os.FileMode
+	mod  time.Time
 }
 
 const interval = 200 * time.Millisecond
 
-func find2(context string, files []fileinfo, dir string, pm *fileutils.PatternMatcher) []fileinfo {
-	file, err := os.Open(context + "/" + dir)
+func find2(root string, files []fileinfo, dir string, pm *fileutils.PatternMatcher) []fileinfo {
+	file, err := os.Open(root + "/" + dir)
 	if err != nil {
 		return nil
 	}
@@ -29,14 +30,18 @@ func find2(context string, files []fileinfo, dir string, pm *fileutils.PatternMa
 	for _, info := range infos {
 		path := dir + info.Name()
 		exclude, _ := pm.Matches(path)
+		if info.IsDir() {
+			path = path + "/"
+		}
 		if !exclude {
 			files = append(files, fileinfo{
-				path:    path,
-				modTime: info.ModTime(),
+				path: path,
+				mode: info.Mode(),
+				mod:  info.ModTime(),
 			})
 		}
 		if info.IsDir() && (!exclude || pm.Exclusions()) {
-			files = find2(context, files, path+"/", pm)
+			files = find2(root, files, path, pm)
 		}
 	}
 	return files
@@ -48,9 +53,9 @@ func (a fileinfos) Len() int           { return len(a) }
 func (a fileinfos) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a fileinfos) Less(i, j int) bool { return a[i].path < a[j].path }
 
-func find(context string, pm *fileutils.PatternMatcher) fileinfos {
+func find(root string, pm *fileutils.PatternMatcher) fileinfos {
 	var files fileinfos
-	files = find2(context, files, "", pm)
+	files = find2(root, files, "", pm)
 	if files != nil {
 		sort.Sort(files)
 	}
@@ -64,7 +69,7 @@ func compare(baseline fileinfos, latest fileinfos) (added []string, updated []st
 			deleted = append(deleted, baseline[b].path)
 			b++
 		} else if baseline[b].path == latest[l].path {
-			if baseline[b].modTime.UnixNano() < latest[l].modTime.UnixNano() {
+			if baseline[b].mode != latest[l].mode || baseline[b].mod.UnixNano() < latest[l].mod.UnixNano() {
 				updated = append(updated, latest[l].path)
 			}
 			b++
@@ -86,11 +91,10 @@ func compare(baseline fileinfos, latest fileinfos) (added []string, updated []st
 	return
 }
 
-// Watch watches for changes to a docker build context
-func Watch(context string, fn func(added []string, updated []string, deleted []string)) error {
+func start(dir string, fn func(added []string, updated []string, deleted []string)) error {
 	// Read patterns from .dockerignore file, if any
 	var patterns []string
-	f, err := os.Open(context + "/.dockerignore")
+	f, err := os.Open(dir + "/.dockerignore")
 	if err == nil {
 		patterns, err = dockerignore.ReadAll(f)
 		f.Close()
@@ -106,20 +110,24 @@ func Watch(context string, fn func(added []string, updated []string, deleted []s
 	}
 
 	// Initialize baseline
-	baseline := find(context, pm)
+	baseline := find(dir, pm)
 
 	// Loop and watch for changes
-	for {
-		time.Sleep(interval)
-		latest := find(context, pm)
-		if latest != nil {
-			if baseline != nil {
-				added, updated, deleted := compare(baseline, latest)
-				if len(added) > 0 || len(updated) > 0 || len(deleted) > 0 {
-					fn(added, updated, deleted)
+	go func() {
+		for {
+			time.Sleep(interval)
+			latest := find(dir, pm)
+			if latest != nil {
+				if baseline != nil {
+					added, updated, deleted := compare(baseline, latest)
+					if len(added) > 0 || len(updated) > 0 || len(deleted) > 0 {
+						fn(added, updated, deleted)
+					}
 				}
+				baseline = latest
 			}
-			baseline = latest
 		}
-	}
+	}()
+
+	return nil
 }

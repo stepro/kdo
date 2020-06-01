@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -304,20 +306,33 @@ func run(cmd *cobra.Command, args []string) error {
 		return errors.New("Cannot combine detach and delete flags")
 	}
 
-	var dirOrImage string
 	if len(args) == 0 {
 		cmd.Help()
 		return nil
 	}
-	dirOrImage = args[0]
-	args = args[1:]
 
-	// TODO: use absolute path for dirOrImage
-	hash := fmt.Sprintf("%s\n%s\n%s", flags.scope, dirOrImage, flags.config.inherit)
+	var dir string
+	var image string
+	var hash string
+	var err error
+	if strings.HasPrefix(args[0], ".") {
+		if dir, err = filepath.Abs(dir); err != nil {
+			return err
+		}
+		hash = dir
+	} else {
+		image = args[0]
+		hash = image
+	}
+	hash = fmt.Sprintf("%s\n%s\n%s", flags.scope, hash, flags.config.inherit)
 	hash = fmt.Sprintf("%x", sha1.Sum([]byte(hash)))[:16]
+	if dir != "" {
+		image = fmt.Sprintf("kudo-%s:%d", hash, time.Now().UnixNano())
+	}
+	command := args[1:]
 
 	if flags.command.exec {
-		execArgs := []string{"exec", "kudo-" + hash, "--container"}
+		execArgs := []string{"exec", pod.Name(hash), "--container"}
 		var container string
 		inherit := strings.SplitN(flags.config.inherit, "/", 2)
 		if len(inherit) > 1 {
@@ -336,7 +351,7 @@ func run(cmd *cobra.Command, args []string) error {
 			k.Run(killArgs...)
 		}
 		if len(flags.session.ports) > 0 {
-			stop, err := forwardPorts(k, "kudo-"+hash)
+			stop, err := forwardPorts(k, pod.Name(hash))
 			if err != nil {
 				return err
 			}
@@ -349,7 +364,7 @@ func run(cmd *cobra.Command, args []string) error {
 			execArgs = append(execArgs, "--tty")
 		}
 		execArgs = append(execArgs, "--")
-		execArgs = append(execArgs, args...)
+		execArgs = append(execArgs, command...)
 		return k.Exec(execArgs...)
 	}
 
@@ -357,13 +372,26 @@ func run(cmd *cobra.Command, args []string) error {
 		return pod.Delete(k, hash, out)
 	}
 
-	var dir string
-	var image string
-	if strings.HasPrefix(dirOrImage, ".") {
-		dir = dirOrImage
-		image = fmt.Sprintf("kudo-%s:%d", hash, time.Now().UnixNano())
-	} else {
-		image = dirOrImage
+	var sync [][2]string
+	if dir != "" {
+		for _, rule := range flags.session.sync {
+			localRemote := strings.SplitN(rule, ":", 2)
+			if len(localRemote) == 1 {
+				localRemote = []string{"", localRemote[0]}
+			}
+			if filepath.IsAbs(localRemote[0]) {
+				return fmt.Errorf(`Invalid sync rule "%s": local path must be relative to the build context`, rule)
+			} else if !path.IsAbs(localRemote[1]) {
+				return fmt.Errorf(`Invalid sync rule "%s": remote path must be absolute`, rule)
+			}
+			if localRemote[0] == "." {
+				localRemote[0] = ""
+			}
+			localRemote[0] = filepath.ToSlash(localRemote[0])
+			localRemote[0] = strings.TrimSuffix(localRemote[0], "/")
+			localRemote[1] = strings.TrimSuffix(localRemote[1], "/")
+			sync = append(sync, [2]string{localRemote[0], localRemote[1]})
+		}
 	}
 
 	var build func(dockerPod string, op output.Operation) error
@@ -422,7 +450,7 @@ func run(cmd *cobra.Command, args []string) error {
 		Listen:  len(flags.session.listen) > 0,
 		Stdin:   flags.command.stdin,
 		TTY:     flags.command.tty,
-		Command: args,
+		Command: command,
 	}, out)
 	if err != nil {
 		return err
@@ -436,19 +464,8 @@ func run(cmd *cobra.Command, args []string) error {
 		pod.Delete(k, hash, out)
 	}()
 
-	if dir != "" && len(flags.session.sync) > 0 {
-		// TODO
-		if err = filesync.Watch(dir, func(added []string, updated []string, deleted []string) {
-			for _, path := range added {
-				out.Debug("added %s", path)
-			}
-			for _, path := range updated {
-				out.Debug("updated %s", path)
-			}
-			for _, path := range deleted {
-				out.Debug("deleted %s", path)
-			}
-		}); err != nil {
+	if len(sync) > 0 {
+		if err = filesync.Start(dir, sync, k, p.Pod, p.Container, out); err != nil {
 			return err
 		}
 	}
