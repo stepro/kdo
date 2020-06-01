@@ -8,7 +8,7 @@
                 "isDefault": true
             },
             "options": {
-                "cwd": "${workspaceRoot}/cli/kudo"
+                "cwd": "${workspaceRoot}/cli/kdo"
             },
             "command": "go",
             "args": [
@@ -29,7 +29,7 @@
         {
             "label": "build-darwin",
             "options": {
-                "cwd": "${workspaceRoot}/cli/kudo",
+                "cwd": "${workspaceRoot}/cli/kdo",
                 "env": {
                     "GOOS": "darwin",
                     "GOARCH": "amd64"
@@ -39,7 +39,7 @@
             "args": [
                 "build",
                 "-o",
-                "bin/darwin/amd64/kudo",
+                "bin/darwin/amd64/kdo",
                 "-v"
             ],
             "problemMatcher": []
@@ -47,7 +47,7 @@
         {
             "label": "build-linux",
             "options": {
-                "cwd": "${workspaceRoot}/cli/kudo",
+                "cwd": "${workspaceRoot}/cli/kdo",
                 "env": {
                     "GOOS": "linux",
                     "GOARCH": "amd64"
@@ -57,7 +57,7 @@
             "args": [
                 "build",
                 "-o",
-                "bin/linux/amd64/kudo",
+                "bin/linux/amd64/kdo",
                 "-v"
             ],
             "problemMatcher": []
@@ -65,7 +65,7 @@
         {
             "label": "build-windows",
             "options": {
-                "cwd": "${workspaceRoot}/cli/kudo",
+                "cwd": "${workspaceRoot}/cli/kdo",
                 "env": {
                     "GOOS": "windows",
                     "GOARCH": "amd64"
@@ -75,7 +75,7 @@
             "args": [
                 "build",
                 "-o",
-                "bin/windows/amd64/kudo.exe",
+                "bin/windows/amd64/kdo.exe",
                 "-v"
             ],
             "problemMatcher": []

@@ -1,73 +1,73 @@
-# <img src="images/logo.png" width="24"> Kudo: sudo for Kubernetes
-[![Build](https://img.shields.io/github/workflow/status/stepro/kudo/Kudo)](https://github.com/stepro/kudo/actions?query=workflow%3AKudo)
-[![Feature Requests](https://img.shields.io/github/issues/stepro/kudo/feature-request.svg)](https://github.com/stepro/kudo/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc)
-[![Bugs](https://img.shields.io/github/issues/stepro/kudo/bug.svg)](https://github.com/stepro/kudo/issues?q=is%3Aopen+is%3Aissue+label%3Abug)
+# <img src="images/logo.png" width="24"> Kdo: sudo for Kubernetes
+[![Build](https://img.shields.io/github/workflow/status/stepro/kdo/Kdo)](https://github.com/stepro/kdo/actions?query=workflow%3AKdo)
+[![Feature Requests](https://img.shields.io/github/issues/stepro/kdo/feature-request.svg)](https://github.com/stepro/kdo/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc)
+[![Bugs](https://img.shields.io/github/issues/stepro/kdo/bug.svg)](https://github.com/stepro/kdo/issues?q=is%3Aopen+is%3Aissue+label%3Abug)
 
-Kudo is a command line tool that executes commands using the context of a new or existing workload in a Kubernetes cluster. It is modeled after the `sudo` command available on most *nix systems, which executes commands using the context of another user.
+Kdo is a command line tool that executes commands using the context of a new or existing workload in a Kubernetes cluster. It is modeled after the `sudo` command available on most *nix systems, which executes commands using the context of another user.
 
-Kudo is designed primarily for development scenarios where you want to observe how a single command runs inside an image (existing or built on the fly using a Dockerfile) that optionally inherits configuration settings from an existing pod specification.
+Kdo is designed primarily for development scenarios where you want to observe how a single command runs inside an image (existing or built on the fly using a Dockerfile) that optionally inherits configuration settings from an existing pod specification.
 
-Kudo can also be used for longer-running connected development sessions where local file updates are pushed into the running container, enabling rapid iteration on code while continuing to run as a properly configured container in the Kubernetes cluster.
+Kdo can also be used for longer-running connected development sessions where local file updates are pushed into the running container, enabling rapid iteration on code while continuing to run as a properly configured container in the Kubernetes cluster.
 
 ## Prerequisites and Installation
 
-Kudo requires the `kubectl` CLI to communicate with a Kubernetes cluster and the `docker` CLI to perform dynamic image builds, so first make sure you have these installed and available in your PATH. Then, download the latest [release](https://github.com/stepro/kudo/releases) for your platform and add the `kudo` binary to your PATH.
+Kdo requires the `kubectl` CLI to communicate with a Kubernetes cluster and the `docker` CLI to perform dynamic image builds, so first make sure you have these installed and available in your PATH. Then, download the latest [release](https://github.com/stepro/kdo/releases) for your platform and add the `kdo` binary to your PATH.
 
-By default `kudo` utilizes the current `kubectl` context, so point it at the Kubernetes cluster of your choice and you're good to go!
+By default `kdo` utilizes the current `kubectl` context, so point it at the Kubernetes cluster of your choice and you're good to go!
 
 ## Examples
 
 Run a command shell in an `alpine` container:
 
 ```
-kudo -it alpine
+kdo -it alpine
 ```
 
 Run a DNS lookup in an `alpine` container:
 
 ```
-kudo -it alpine nslookup kubernetes.default.svc.cluster.local
+kdo -it alpine nslookup kubernetes.default.svc.cluster.local
 ```
 
 Run a Node.js app in a container built from the current directory:
 
 ```
-kudo . npm start
+kdo . npm start
 ```
 
 Run the default command in a container built from the current directory that inherits configuration from the first container defined by the pod template in the `todo-app` deployment spec:
 
 ```
-kudo -c deployment/todo-app .
+kdo -c deployment/todo-app .
 ```
 
 Run a command shell in a container built from the current directory that inherits existing configuration from the first container defined by the first pod selected by the `todo-app` service, and also push any changes in the current directory to the container's `/app` directory:
 
 ```
-kudo -c service/todo-app -s .:/app -it . sh
+kdo -c service/todo-app -s .:/app -it . sh
 ```
 
 Debug a Node.js app in a container built from the current directory that inherits existing configuration from the first container defined by the `todo-app-56db-xdhfx` pod, and forward TCP connections made to local ports `8080` and `9229` to container ports `80` and `9229` respectively:
 
 ```
-kudo -c todo-app-56db-xdhfx -p 8080:80 -p 9229:9229 . node --inspect-brk=0.0.0.0:9229 server.js
+kdo -c todo-app-56db-xdhfx -p 8080:80 -p 9229:9229 . node --inspect-brk=0.0.0.0:9229 server.js
 ```
 
-Run the default command in a `kudo-samples/todo-app` container that inherits its configuration from the `web` container defined by the pod template in the `todo-app` deployment spec, and also overlay any existing pods produced by that same deployment:
+Run the default command in a `kdo-samples/todo-app` container that inherits its configuration from the `web` container defined by the pod template in the `todo-app` deployment spec, and also overlay any existing pods produced by that same deployment:
 
 ```
-kudo -c deployment/todo-app:web -R kudo-samples/todo-app
+kdo -c deployment/todo-app:web -R kdo-samples/todo-app
 ```
 
 ## Usage
 
-Kudo is a single command CLI that can be called in a small number of unique ways:
+Kdo is a single command CLI that can be called in a small number of unique ways:
 
 ```
-kudo [flags] image [command] [args...]
-kudo [flags] build-dir [command] [args...]
-kudo --[un]install [-q, --quiet] [-v, --verbose] [--debug]
-kudo --version | --help
+kdo [flags] image [command] [args...]
+kdo [flags] build-dir [command] [args...]
+kdo --[un]install [-q, --quiet] [-v, --verbose] [--debug]
+kdo --version | --help
 ```
 
 When called with an `image` parameter, this represents an existing image to be run in the Kubernetes cluster. This is distinguished from the `build-dir` parameter, which always starts with `.` and identifies a local build context for a custom image to run in the Kubernetes cluster.
@@ -78,7 +78,7 @@ When called with the `--install` or `--uninstall` flag, all other flags with the
 
 ## Flags
 
-Kudo can be customized in a variety of ways through a set of command line flags.
+Kdo can be customized in a variety of ways through a set of command line flags.
 
 ### Kubernetes flags
 
@@ -94,7 +94,7 @@ Flag | Default | Description
 
 ### Installation flags
 
-These flags are used to manage the kudo server components. These components are installed into the `kube-system` namespace as a daemon set, so using these flags requires administrative access to the cluster.
+These flags are used to manage the kdo server components. These components are installed into the `kube-system` namespace as a daemon set, so using these flags requires administrative access to the cluster.
 
 Flag | Description
 ---- | -----------
@@ -103,11 +103,11 @@ Flag | Description
 
 Normally the server components are installed automatically as needed, but this is not possible if the user does not have permission to install into the `kube-system` namespace. In that case, an alternative administrative user can use the `--install` flag to manually configure the cluster for other users.
 
-The `--uninstall` flag can be used to explicitly remove any leftover kudo pods across all namespaces in addition to the server components from a cluster.
+The `--uninstall` flag can be used to explicitly remove any leftover kdo pods across all namespaces in addition to the server components from a cluster.
 
 ### Scope flag
 
-The scope flag (`--scope`) can be used to change how kudo pods are uniquely named. By default, the local machine's hostname is used.
+The scope flag (`--scope`) can be used to change how kdo pods are uniquely named. By default, the local machine's hostname is used.
 
 The scope value is combined with the `image` or `build-dir` parameter and any value of the `--inherit` flag, then SHA-1 hashed to produce the final pod identifier.
 
@@ -124,7 +124,7 @@ Flag | Default | Description
 `--build-arg` | `[]` | build-time variables in the form `name=value`
 `--build-target` | `<empty>` | dockerfile target to build
 
-When the `docker` CLI is invoked, it does not use the default configured Docker daemon. Instead, it uses the kudo server components to directly access the Docker daemon running on a node in the Kubernetes cluster. Therefore, it is theoretically not a requirement that the local machine is actually running Docker, although in most cases (e.g. Docker Desktop) this will be the case. It **is**, however, a requirement that the node on which the kudo pod is scheduled is using Docker for its container runtime and the Docker daemon socket at `/var/run/docker.sock` on the host can be volume mounted into the pod.
+When the `docker` CLI is invoked, it does not use the default configured Docker daemon. Instead, it uses the kdo server components to directly access the Docker daemon running on a node in the Kubernetes cluster. Therefore, it is theoretically not a requirement that the local machine is actually running Docker, although in most cases (e.g. Docker Desktop) this will be the case. It **is**, however, a requirement that the node on which the kdo pod is scheduled is using Docker for its container runtime and the Docker daemon socket at `/var/run/docker.sock` on the host can be volume mounted into the pod.
 
 ### Configuration flags
 
@@ -148,11 +148,11 @@ When inheriting an existing configuration, there are cases when the existing pod
 
 The `-e, --env` flags set environment variables, and in the case of an inherited configuration, override any inherited environment variables.
 
-The `-R, --replace` flag only applies when the inherited configuration is from the `deployment`, `replicaset`, `replicationcontroller` and `statefulset` workload kinds, or from the `service` kind. For workloads, this flag scales the workload instance to zero for the duration of the command. For services, this flag changes the pod selector to select the kudo pod for the duration of the command.
+The `-R, --replace` flag only applies when the inherited configuration is from the `deployment`, `replicaset`, `replicationcontroller` and `statefulset` workload kinds, or from the `service` kind. For workloads, this flag scales the workload instance to zero for the duration of the command. For services, this flag changes the pod selector to select the kdo pod for the duration of the command.
 
 ### Session flags
 
-These flags customize behavior that applies for the duration of the kudo process.
+These flags customize behavior that applies for the duration of the kdo process.
 
 Flag | Default | Description
 ---- | ------- | -----------
@@ -174,7 +174,7 @@ docker run -p 27017:27017 -d mongo:4
 # 8080 to container port 80, and when the web server code connects to a
 # Mongo database using the MONGO_CONNECTION_STRING environment variable,
 # proxy the connection back to local port 27017.
-kudo -p 8080:80 -e MONGO_CONNECTION_STRING=localhost:27017 -l 27017:27017 .
+kdo -p 8080:80 -e MONGO_CONNECTION_STRING=localhost:27017 -l 27017:27017 .
 ```
 
 The `-s, --sync`, `-p, --forward` and `-l, --listen` flags cannot be combined with the `-d, --detach` flag.
@@ -207,7 +207,7 @@ These flags cannot be combined.
 
 ### Output flags
 
-These flags customize how kudo outputs information.
+These flags customize how kdo outputs information.
 
 Flag | Default | Description
 ---- | ------- | -----------
@@ -226,4 +226,4 @@ Flag | Default | Description
 
 ## License
 
-Kudo is licensed under the [MIT](LICENSE) license.
+Kdo is licensed under the [MIT](LICENSE) license.

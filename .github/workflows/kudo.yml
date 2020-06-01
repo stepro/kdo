@@ -1,4 +1,4 @@
-name: Kudo
+name: kdo
 
 on:
   pull_request:
@@ -30,22 +30,22 @@ jobs:
       env:
         GOOS: darwin
         GOARCH: amd64
-      working-directory: cli/kudo
-      run: go build -o bin/darwin/amd64/kudo -v .
+      working-directory: cli/kdo
+      run: go build -o bin/darwin/amd64/kdo -v .
 
     - name: Build Linux
       env:
         GOOS: linux
         GOARCH: amd64
-      working-directory: cli/kudo
-      run: go build -o bin/linux/amd64/kudo -v .
+      working-directory: cli/kdo
+      run: go build -o bin/linux/amd64/kdo -v .
 
     - name: Build Windows
       env:
         GOOS: windows
         GOARCH: amd64
-      working-directory: cli/kudo
-      run: go build -o bin/windows/amd64/kudo.exe -v .
+      working-directory: cli/kdo
+      run: go build -o bin/windows/amd64/kdo.exe -v .
 
     - name: Test
       run: go test -v ./...

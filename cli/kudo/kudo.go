@@ -12,16 +12,16 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/stepro/kudo/pkg/docker"
-	"github.com/stepro/kudo/pkg/filesync"
-	"github.com/stepro/kudo/pkg/kubectl"
-	"github.com/stepro/kudo/pkg/output"
-	"github.com/stepro/kudo/pkg/pod"
-	"github.com/stepro/kudo/pkg/server"
+	"github.com/stepro/kdo/pkg/docker"
+	"github.com/stepro/kdo/pkg/filesync"
+	"github.com/stepro/kdo/pkg/kubectl"
+	"github.com/stepro/kdo/pkg/output"
+	"github.com/stepro/kdo/pkg/pod"
+	"github.com/stepro/kdo/pkg/server"
 )
 
 var cmd = &cobra.Command{
-	Short:   "kudo is sudo for Kubernetes",
+	Short:   "kdo is sudo for Kubernetes",
 	Use:     usage,
 	Version: "0.2.0",
 	Example: examples,
@@ -29,45 +29,45 @@ var cmd = &cobra.Command{
 }
 
 var usage = strings.TrimSpace(`
-  kudo [flags] image [command] [args...]
-  kudo [flags] build-dir [command] [args...]
-  kudo --[un]install [-q, --quiet] [-v, --verbose] [--debug]
-  kudo --version | --help
+  kdo [flags] image [command] [args...]
+  kdo [flags] build-dir [command] [args...]
+  kdo --[un]install [-q, --quiet] [-v, --verbose] [--debug]
+  kdo --version | --help
 `)
 
 var examples = strings.Trim(`
   # Run a command shell in an "alpine" container
-  kudo -it alpine
+  kdo -it alpine
 
   # Run a DNS lookup in an "alpine" container
-  kudo alpine nslookup kubernetes.default.svc.cluster.local
+  kdo alpine nslookup kubernetes.default.svc.cluster.local
 
   # Run a Node.js app in a container built from the current directory
-  kudo . npm start
+  kdo . npm start
 
   # Run the default command in a container built from the current
   # directory that inherits configuration from the first container
   # defined by the pod template in the "todo-app" deployment spec
-  kudo -c deployment/todo-app .
+  kdo -c deployment/todo-app .
 
   # Run a command shell in a container built from the current directory
   # that inherits existing configuration from the first container defined
   # by the first pod selected by the "todo-app" service, and also push any
   # changes in the current directory to the container's "/app" directory
-  kudo -c service/todo-app -s .:/app -it . sh
+  kdo -c service/todo-app -s .:/app -it . sh
 
   # Debug a Node.js app in a container built from the current directory
   # that inherits existing configuration from the first container defined
   # by the todo-app-56db-xdhfx pod, and forward TCP connections made to
   # local ports 8080 and 9229 to container ports 80 and 9229 respectively
-  kudo -c todo-app-56db-xdhfx -p 8080:80 -p 9229:9229 \
+  kdo -c todo-app-56db-xdhfx -p 8080:80 -p 9229:9229 \
     . node --inspect-brk=0.0.0.0:9229 server.js
 
-  # Run the default command in a "kudo-samples/todo-app" container
+  # Run the default command in a "kdo-samples/todo-app" container
   # that inherits its configuration from the "web" container defined
   # by the pod template in the "todo-app" deployment spec, and also
   # overlay any existing pods produced by that same deployment
-  kudo -c deployment/todo-app:web -R kudo-samples/todo-app
+  kdo -c deployment/todo-app:web -R kdo-samples/todo-app
 `, "\r\n")
 
 var flags struct {
@@ -327,7 +327,7 @@ func run(cmd *cobra.Command, args []string) error {
 	hash = fmt.Sprintf("%s\n%s\n%s", flags.scope, hash, flags.config.inherit)
 	hash = fmt.Sprintf("%x", sha1.Sum([]byte(hash)))[:16]
 	if dir != "" {
-		image = fmt.Sprintf("kudo-%s:%d", hash, time.Now().UnixNano())
+		image = fmt.Sprintf("kdo-%s:%d", hash, time.Now().UnixNano())
 	}
 	command := args[1:]
 
