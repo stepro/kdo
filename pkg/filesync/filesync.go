@@ -3,8 +3,8 @@ package filesync
 import (
 	"strings"
 
-	"github.com/stepro/kudo/pkg/kubectl"
-	"github.com/stepro/kudo/pkg/output"
+	"github.com/stepro/kdo/pkg/kubectl"
+	"github.com/stepro/kdo/pkg/output"
 )
 
 // Start starts synchronizing files

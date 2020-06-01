@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/stepro/kudo/pkg/output"
+	"github.com/stepro/kdo/pkg/output"
 )
 
 // Run runs a command

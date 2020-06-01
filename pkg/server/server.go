@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stepro/kudo/pkg/kubectl"
-	"github.com/stepro/kudo/pkg/output"
+	"github.com/stepro/kdo/pkg/kubectl"
+	"github.com/stepro/kdo/pkg/output"
 )
 
 var manifest = `
@@ -14,9 +14,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: kube-system
-  name: kudo-server
+  name: kdo-server
   labels:
-    component: kudo-server
+    component: kdo-server
 data:
   docker-daemon.sh: |-
     #!/bin/sh
@@ -27,24 +27,24 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   namespace: kube-system
-  name: kudo-server
+  name: kdo-server
   labels:
-    component: kudo-server
+    component: kdo-server
 spec:
   selector:
     matchLabels:
-      component: kudo-server
+      component: kdo-server
   template:
     metadata:
       labels:
-        component: kudo-server
+        component: kdo-server
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux	
       volumes:
       - name: config
         configMap:
-          name: kudo-server
+          name: kdo-server
           items:
           - key: docker-daemon.sh
             path: docker-daemon.sh
@@ -78,7 +78,7 @@ func Install(k *kubectl.CLI, out *output.Interface) error {
 
 		op.Progress("checking readiness")
 		for {
-			readiness, err := k.String("--namespace", "kube-system", "get", "daemonset", "kudo-server",
+			readiness, err := k.String("--namespace", "kube-system", "get", "daemonset", "kdo-server",
 				"--output", "go-template={{.status.numberReady}} {{.status.desiredNumberScheduled}}")
 			if err != nil {
 				return err
@@ -110,7 +110,7 @@ func Install(k *kubectl.CLI, out *output.Interface) error {
 func NodePods(k *kubectl.CLI, out *output.Interface) (map[string]string, error) {
 	var nodePods map[string]string
 
-	pods, err := k.Lines("--namespace", "kube-system", "get", "pod", "--selector", "component=kudo-server",
+	pods, err := k.Lines("--namespace", "kube-system", "get", "pod", "--selector", "component=kdo-server",
 		"--output", "go-template={{range .items}}{{.spec.nodeName}} {{.metadata.name}} {{range .status.containerStatuses}}{{.ready}}{{end}}\n{{end}}")
 	if err != nil {
 		return nil, err
@@ -139,6 +139,6 @@ func NodePods(k *kubectl.CLI, out *output.Interface) (map[string]string, error) 
 // Uninstall uninstalls server components
 func Uninstall(k *kubectl.CLI, out *output.Interface) error {
 	return out.Do("Uninstalling server components", func() error {
-		return k.Run("--namespace", "kube-system", "delete", "daemonset,configmap", "--selector", "component=kudo-server")
+		return k.Run("--namespace", "kube-system", "delete", "daemonset,configmap", "--selector", "component=kdo-server")
 	})
 }

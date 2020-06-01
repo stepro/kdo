@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/stepro/kudo/pkg/kubectl"
-	"github.com/stepro/kudo/pkg/output"
-	"github.com/stepro/kudo/pkg/server"
+	"github.com/stepro/kdo/pkg/kubectl"
+	"github.com/stepro/kdo/pkg/output"
+	"github.com/stepro/kdo/pkg/server"
 )
 
 // Name gets the name of the pod associated with a hash
 func Name(hash string) string {
-	return "kudo-" + hash
+	return "kdo-" + hash
 }
 
 func track(k *kubectl.CLI, pod string, op output.Operation) func() {
@@ -33,7 +33,7 @@ func track(k *kubectl.CLI, pod string, op output.Operation) func() {
 		}
 		msg := obj["message"].(string)
 		msg = strings.ToLower(msg[:1]) + msg[1:]
-		if msg == "started container kudo-await-image-build" {
+		if msg == "started container kdo-await-image-build" {
 			msg = "<awaiting image build>"
 		}
 		op.Progress("%s", msg)
@@ -64,7 +64,7 @@ func baseline(k *kubectl.CLI, inherit string) (object, string, error) {
 	}
 
 	if inherit == "" {
-		return manifest, "kudo", nil
+		return manifest, "kdo", nil
 	}
 
 	var kind string
@@ -203,7 +203,7 @@ func (p *Process) ExitCode() (int, error) {
 func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.Operation) error, settings *Settings, out *output.Interface) (*Process, error) {
 	p := Process{
 		k:   k,
-		Pod: "kudo-" + hash,
+		Pod: "kdo-" + hash,
 		out: out,
 	}
 
@@ -230,8 +230,8 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 					}
 					labels[nameValue[0]] = nameValue[1]
 				}
-				labels["kudo-pod"] = "1"
-				labels["kudo-hash"] = hash
+				labels["kdo-pod"] = "1"
+				labels["kdo-hash"] = hash
 			}).with("annotations", func(annotations object) {
 				for _, annotation := range settings.Annotations {
 					nameValue := strings.SplitN(annotation, "=", 2)
@@ -244,11 +244,11 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 		}).with("spec", func(spec object) {
 			if build != nil {
 				spec.append("initContainers", map[string]interface{}{
-					"name":  "kudo-await-image-build",
+					"name":  "kdo-await-image-build",
 					"image": "docker:19.03",
 					"volumeMounts": []map[string]interface{}{
 						{
-							"name":      "kudo-docker-socket",
+							"name":      "kdo-docker-socket",
 							"mountPath": "/var/run/docker.sock",
 						},
 					},
@@ -258,7 +258,7 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 						`while [ -z "$(docker images ` + settings.Image + ` --format '{{.Repository}}')" ]; do sleep 1; done`,
 					},
 				}).append("volumes", map[string]interface{}{
-					"name": "kudo-docker-socket",
+					"name": "kdo-docker-socket",
 					"hostPath": map[string]interface{}{
 						"path": "/var/run/docker.sock",
 					},
@@ -363,12 +363,12 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 // Delete deletes the pod associated with a hash, if any
 func Delete(k *kubectl.CLI, hash string, out *output.Interface) error {
 	return out.Do("Deleting pod", func(op output.Operation) error {
-		name := "kudo-" + hash
+		name := "kdo-" + hash
 
 		stop := track(k, name, op)
 		defer stop()
 
-		return k.Run("delete", "pod", "kudo-"+hash, "--ignore-not-found", "--now", "--wait=false")
+		return k.Run("delete", "pod", "kdo-"+hash, "--ignore-not-found", "--now", "--wait=false")
 	})
 }
 
@@ -376,6 +376,6 @@ func Delete(k *kubectl.CLI, hash string, out *output.Interface) error {
 func DeleteAll(k *kubectl.CLI, out *output.Interface) error {
 	// TODO: across all namespaces
 	return out.Do("Deleting pods", func() error {
-		return k.Run("delete", "pod", "-l", "kudo-pod=1")
+		return k.Run("delete", "pod", "-l", "kdo-pod=1")
 	})
 }
