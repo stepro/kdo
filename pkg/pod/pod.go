@@ -22,7 +22,7 @@ func track(k *kubectl.CLI, pod string, op output.Operation) func() {
 			return
 		}
 		obj := event["object"].(map[string]interface{})
-		firstTimestamp := obj["firstTimestamp"].(string)
+		firstTimestamp, _ := obj["firstTimestamp"].(string)
 		if firstTimestamp < timestamp {
 			return
 		}
