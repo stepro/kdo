@@ -13,6 +13,11 @@ import (
 	"github.com/stepro/kudo/pkg/server"
 )
 
+// Name gets the name of the pod associated with a hash
+func Name(hash string) string {
+	return "kudo-" + hash
+}
+
 func track(k *kubectl.CLI, pod string, op output.Operation) func() {
 	timestamp := time.Now().In(time.UTC).Format(time.RFC3339)
 

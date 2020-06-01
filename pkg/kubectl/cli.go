@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"io"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -61,6 +62,13 @@ func (k *CLI) Run(arg ...string) error {
 	return command.Run(k.command(arg...), k.out, k.verb)
 }
 
+// Input runs a kubectl command with input
+func (k *CLI) Input(input io.Reader, arg ...string) error {
+	cmd := k.command(arg...)
+	cmd.Stdin = input
+	return command.Run(cmd, k.out, k.verb)
+}
+
 // String runs a kubectl command that outputs a string
 func (k *CLI) String(arg ...string) (string, error) {
 	return command.String(k.command(arg...), k.out, k.verb)
@@ -92,9 +100,7 @@ func (k *CLI) StartLines(args []string, fn func(line string), end chan error) fu
 
 // Apply runs a kubectl apply command
 func (k *CLI) Apply(manifest string) error {
-	cmd := k.command("apply", "-f", "-")
-	cmd.Stdin = strings.NewReader(manifest)
-	return command.Run(cmd, k.out, k.verb)
+	return k.Input(strings.NewReader(manifest), "apply", "-f", "-")
 }
 
 // Exec "replaces" the current process with a kubectl command

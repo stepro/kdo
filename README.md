@@ -70,7 +70,7 @@ kudo --[un]install [-q, --quiet] [-v, --verbose] [--debug]
 kudo --version | --help
 ```
 
-When called with an `image` parameter, this represents an existing image to be run in the Kubernetes cluster. This is distinguished from the `build-dir` parameter, which always starts with `.` and identifies a local Docker build context to be dynamically built into a custom image to run in the Kubernetes cluster.
+When called with an `image` parameter, this represents an existing image to be run in the Kubernetes cluster. This is distinguished from the `build-dir` parameter, which always starts with `.` and identifies a local build context for a custom image to run in the Kubernetes cluster.
 
 When the `command` parameter is set, this configures the `command` property in the container and removes the `args` property.
 
@@ -156,11 +156,11 @@ These flags customize behavior that applies for the duration of the kudo process
 
 Flag | Default | Description
 ---- | ------- | -----------
-`-s, --sync` | `[]` | push local file changes to the container in the form `localdir:remotedir`
-`-p, --forward` | `[]` | forward local ports to container ports in the form `local:remote`
-`-l, --listen` | `[]` | forward container ports to local ports in the form `remote:local`
+`-s, --sync` | `[]` | push local file changes to the container in the form `[localdir:]remotedir`
+`-p, --forward` | `[]` | forward local ports to container ports in the form `[local:]remote`
+`-l, --listen` | `[]` | forward container ports to local ports in the form `remote[:local]`
 
-The `-s, --sync` flag is only valid when using the `build-dir` parameter. It enables synchronization of changes to files in the local build context into an appropriate location in the container. For example, if the `build-dir` is `.`, then `--sync .:/app` maps the entire build context to the `/app` directory in the container. More complex usage can map individual directories, as in `./src:/app/src`.
+The `-s, --sync` flag is only valid when using the `build-dir` parameter. It enables synchronization of changes in directories under the local build context into an appropriate directory in the container. For example, `--sync /app` synchronizes the entire build context to the `/app` directory in the container, while `--sync src:/app/src` synchronizes only the `src` directory to the `/app/src` directory in the container. The local directory must be relative to the build context and defaults to `.`, while the remote directory must be an absolute path to a directory in the container.
 
 The `-p, --forward` flag enables the local machine to access specific container ports, for example, `--forward 8080:80` will forward local port `8080` to container port `80`.
 
