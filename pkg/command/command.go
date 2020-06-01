@@ -20,8 +20,9 @@ func Run(cmd *exec.Cmd, out *output.Interface, verb output.Level) error {
 		cmd.Stderr = stderr
 	}
 
+	label := cmdname(cmd)
+
 	if out != nil {
-		label := cmdname(cmd)
 		if cmd.Stdout == nil {
 			cmd.Stdout = out.NewStream(label, verb, false)
 		}
@@ -43,9 +44,9 @@ func Run(cmd *exec.Cmd, out *output.Interface, verb output.Level) error {
 			out.Debug("failed: %s", args)
 		}
 		if stderr != nil {
-			err = fmt.Errorf("%s: %s", cmdname(cmd), string(stderr.Bytes()))
+			err = fmt.Errorf("%s: %s", label, string(stderr.Bytes()))
 		} else {
-			err = fmt.Errorf("%s: %v", cmdname(cmd), err)
+			err = fmt.Errorf("%s: %v", label, err)
 		}
 		return err
 	}
