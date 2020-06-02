@@ -1,5 +1,5 @@
 # <img src="images/logo.png" width="24"> Kdo: sudo for Kubernetes
-[![Build](https://img.shields.io/github/workflow/status/stepro/kdo/Kdo)](https://github.com/stepro/kdo/actions?query=workflow%3AKdo)
+[![Build](https://img.shields.io/github/workflow/status/stepro/kdo/kdo)](https://github.com/stepro/kdo/actions?query=workflow%3Akdo)
 [![Feature Requests](https://img.shields.io/github/issues/stepro/kdo/feature-request.svg)](https://github.com/stepro/kdo/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc)
 [![Bugs](https://img.shields.io/github/issues/stepro/kdo/bug.svg)](https://github.com/stepro/kdo/issues?q=is%3Aopen+is%3Aissue+label%3Abug)
 
