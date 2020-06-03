@@ -108,7 +108,14 @@ func baseline(k *kubectl.CLI, inherit string) (object, string, error) {
 	}
 
 	if kind == "service" {
-		// TODO: enumerate endpoints, get first selected pod
+		pods, err := k.Lines("get", "endpoints", name, "-o", `go-template={{range .subsets}}{{range .addresses}}{{if .targetRef}}{{if eq .targetRef.kind "Pod"}}{{.targetRef.name}}{{end}}{{end}}{{end}}{{end}}`)
+		if err != nil {
+			return nil, "", err
+		} else if len(pods) == 0 {
+			return nil, "", fmt.Errorf(`Unable to determine pod from service "%s"`, name)
+		}
+		kind = "pod"
+		name = pods[0]
 	}
 
 	var source object
