@@ -23,7 +23,7 @@ import (
 var cmd = &cobra.Command{
 	Short:   "kdo is sudo for Kubernetes",
 	Use:     usage,
-	Version: "0.3.0",
+	Version: "0.4.0",
 	Example: examples,
 	RunE:    run,
 }
