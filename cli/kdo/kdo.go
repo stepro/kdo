@@ -270,17 +270,18 @@ func run(cmd *cobra.Command, args []string) error {
 		out, output.LevelVerbose)
 
 	if flags.install {
-		if flags.uninstall || len(args) > 0 {
-			cmd.Help()
-			return nil
+		if flags.uninstall {
+			return errors.New("Cannot specify --uninstall flag with --install flag")
+		}
+		if len(args) > 0 {
+			return errors.New("Cannot specify command or arguments with --install flag")
 		}
 		return server.Install(k, out)
 	}
 
 	if flags.uninstall {
-		if flags.install || len(args) > 0 {
-			cmd.Help()
-			return nil
+		if len(args) > 0 {
+			return errors.New("Cannot specify command or arguments with --uninstall flag")
 		}
 		if err := pod.DeleteAll(k, out); err != nil {
 			return err
@@ -288,22 +289,25 @@ func run(cmd *cobra.Command, args []string) error {
 		return server.Uninstall(k, out)
 	}
 
+	if flags.config.inherit == "" && flags.config.replace {
+		return errors.New("Cannot specify -R, --replace flag without -c, --inherit flag")
+	}
 	if len(flags.session.sync) > 0 || len(flags.session.ports) > 0 || len(flags.session.listen) > 0 {
 		if flags.detach {
-			return errors.New("Cannot combine sync, forward or listen flags with detach flag")
+			return errors.New("Cannot combine -s, --sync, -p, --forward or -l, --listen flags with -d, --detach flag")
 		}
 	}
 	if !flags.command.exec && len(flags.command.prekill) > 0 {
-		return errors.New("Can only use prekill flag with exec flag")
+		return errors.New("Can only use -k --prekill flag with -x, --exec flag")
 	}
 	if flags.command.exec && flags.detach {
-		return errors.New("Cannot combine exec and detach flags")
+		return errors.New("Cannot combine -x, --exec and -d, --detach flags")
 	}
 	if flags.command.exec && flags.delete {
-		return errors.New("Cannot combine exec and delete flags")
+		return errors.New("Cannot combine -x, --exec and --delete flags")
 	}
 	if flags.detach && flags.delete {
-		return errors.New("Cannot combine detach and delete flags")
+		return errors.New("Cannot combine -d, --detach and --delete flags")
 	}
 
 	if len(args) == 0 {
@@ -447,6 +451,7 @@ func run(cmd *cobra.Command, args []string) error {
 		Inherit: flags.config.inherit,
 		Image:   image,
 		Env:     flags.config.env,
+		Replace: flags.config.replace,
 		Listen:  len(flags.session.listen) > 0,
 		Stdin:   flags.command.stdin,
 		TTY:     flags.command.tty,

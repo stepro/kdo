@@ -18,28 +18,6 @@ func Name(hash string) string {
 	return "kdo-" + hash
 }
 
-func track(k *kubectl.CLI, pod string, op output.Operation) func() {
-	timestamp := time.Now().In(time.UTC).Format(time.RFC3339)
-
-	return k.StartLines([]string{"get", "--raw=/api/v1/events?fieldSelector=involvedObject.name=" + pod + "&watch=1"}, func(line string) {
-		var event map[string]interface{}
-		if err := json.Unmarshal([]byte(line), &event); err != nil {
-			return
-		}
-		obj := event["object"].(map[string]interface{})
-		firstTimestamp, _ := obj["firstTimestamp"].(string)
-		if firstTimestamp < timestamp {
-			return
-		}
-		msg := obj["message"].(string)
-		msg = strings.ToLower(msg[:1]) + msg[1:]
-		if msg == "started container kdo-await-image-build" {
-			msg = "<awaiting image build>"
-		}
-		op.Progress("%s", msg)
-	}, nil)
-}
-
 // Settings represents settings for a pod
 type Settings struct {
 	Inherit     string
@@ -49,27 +27,14 @@ type Settings struct {
 	NoProbes    bool
 	Image       string
 	Env         []string
+	Replace     bool
 	Listen      bool
 	Stdin       bool
 	TTY         bool
 	Command     []string
 }
 
-func baseline(k *kubectl.CLI, inherit string) (object, string, error) {
-	var manifest object
-
-	manifest = map[string]interface{}{
-		"apiVersion": "v1",
-		"kind":       "Pod",
-	}
-
-	if inherit == "" {
-		return manifest, "kdo", nil
-	}
-
-	var kind string
-	var name string
-	var container string
+func parseInherit(inherit string) (kind, name, container string, err error) {
 	kindName := strings.SplitN(inherit, "/", 2)
 	if len(kindName) == 1 {
 		kind = "pod"
@@ -79,7 +44,8 @@ func baseline(k *kubectl.CLI, inherit string) (object, string, error) {
 		kind = strings.ToLower(kind)
 		switch kind {
 		default:
-			return nil, "", fmt.Errorf(`Unknown kind "%s"`, kindName[0])
+			err = fmt.Errorf(`Unknown kind "%s"`, kindName[0])
+			return
 		case "cj", "cronjob", "cronjobs":
 			kind = "cronjob"
 		case "ds", "daemonset", "daemonsets":
@@ -101,18 +67,33 @@ func baseline(k *kubectl.CLI, inherit string) (object, string, error) {
 		}
 		name = kindName[1]
 	}
+
 	nameContainer := strings.SplitN(name, ":", 2)
 	if len(nameContainer) == 2 {
 		name = nameContainer[0]
 		container = nameContainer[1]
 	}
 
+	return
+}
+
+func baseline(k *kubectl.CLI, kind, name, container string) (object, int, string, error) {
+	var manifest object
+	manifest = map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "Pod",
+	}
+
+	if kind == "" {
+		return manifest, 0, "kdo", nil
+	}
+
 	if kind == "service" {
-		pods, err := k.Lines("get", "endpoints", name, "-o", `go-template={{range .subsets}}{{range .addresses}}{{if .targetRef}}{{if eq .targetRef.kind "Pod"}}{{.targetRef.name}}{{end}}{{end}}{{end}}{{end}}`)
+		pods, err := k.Lines("get", "endpoints", name, "-o", `go-template={{range .subsets}}{{range .addresses}}{{if .targetRef}}{{if eq .targetRef.kind "Pod"}}{{.targetRef.name}}`+"\n"+`{{end}}{{end}}{{end}}{{end}}`)
 		if err != nil {
-			return nil, "", err
+			return nil, 0, "", err
 		} else if len(pods) == 0 {
-			return nil, "", fmt.Errorf(`Unable to determine pod from service "%s"`, name)
+			return nil, 0, "", fmt.Errorf(`Unable to determine pod from service "%s"`, name)
 		}
 		kind = "pod"
 		name = pods[0]
@@ -120,9 +101,15 @@ func baseline(k *kubectl.CLI, inherit string) (object, string, error) {
 
 	var source object
 	if s, err := k.String("get", kind, name, "-o", "json"); err != nil {
-		return nil, "", err
+		return nil, 0, "", err
 	} else if err = json.Unmarshal([]byte(s), &source); err != nil {
-		return nil, "", err
+		return nil, 0, "", err
+	}
+
+	var replicas int
+	switch kind {
+	case "deployment", "replicaset", "replicationcontroller", "statefulset":
+		replicas = source.obj("spec").num("replicas")
 	}
 
 	if kind == "cronjob" {
@@ -174,7 +161,7 @@ func baseline(k *kubectl.CLI, inherit string) (object, string, error) {
 		}
 	}
 
-	return manifest, container, nil
+	return manifest, replicas, container, nil
 }
 
 // Process represents a process in a pod
@@ -210,7 +197,7 @@ func (p *Process) ExitCode() (int, error) {
 func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.Operation) error, settings *Settings, out *output.Interface) (*Process, error) {
 	p := Process{
 		k:   k,
-		Pod: "kdo-" + hash,
+		Pod: Name(hash),
 		out: out,
 	}
 
@@ -218,13 +205,32 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 		stop := track(k, p.Pod, op)
 		defer stop()
 
-		err := k.Run("delete", "pod", p.Pod, "--ignore-not-found", "--now")
+		err := k.Run("delete", "pod", p.Pod, "--ignore-not-found")
 		if err != nil {
 			return err
 		}
 
+		var kind string
+		var name string
+		var container string
+		if settings.Inherit != "" {
+			if kind, name, container, err = parseInherit(settings.Inherit); err != nil {
+				return err
+			}
+		}
+
+		var selector string
+		if settings.Replace && kind == "service" {
+			nameValues, err := k.Lines("get", "service", name, "-o", "go-template={{range $k, $v := .spec.selector}}{{$k}}={{$v}}\n{{end}}")
+			if err != nil {
+				return err
+			}
+			selector = strings.Join(nameValues, ",")
+		}
+
 		var manifest object
-		if manifest, p.Container, err = baseline(k, settings.Inherit); err != nil {
+		var replicas int
+		if manifest, replicas, p.Container, err = baseline(k, kind, name, container); err != nil {
 			return err
 		}
 		manifest.with("metadata", func(metadata object) {
@@ -301,6 +307,32 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 					delete(container, "startupProbe")
 				}
 			})
+			if settings.Replace {
+				replacer := map[string]interface{}{
+					"name":  "kdo-replacer",
+					"image": "bitnami/kubectl",
+					"securityContext": map[string]interface{}{
+						"runAsUser": 0,
+					},
+				}
+				switch kind {
+				default:
+					out.Warning("replacement is not relevant for kind %s", kind)
+				case "deployment", "replicaset", "replicationcontroller", "statefulset":
+					replacer["command"] = []string{"/bin/sh", "-c", fmt.Sprintf(
+						"trap 'exec kubectl scale --replicas=%d %s/%s' TERM && "+
+							"kubectl scale --replicas=0 %s/%s && "+
+							"while true; do sleep 1; done",
+						replicas, kind, name, kind, name)}
+				case "service":
+					replacer["command"] = []string{"/bin/sh", "-c", fmt.Sprintf(
+						"trap 'exec kubectl set selector service %s \"%s\"' TERM && "+
+							"kubectl set selector service %s kdo-hash=%s && "+
+							"while true; do sleep 1; done",
+						name, selector, name, hash)}
+				}
+				spec.append("containers", replacer)
+			}
 			spec["restartPolicy"] = "Never"
 		})
 
@@ -370,12 +402,12 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 // Delete deletes the pod associated with a hash, if any
 func Delete(k *kubectl.CLI, hash string, out *output.Interface) error {
 	return out.Do("Deleting pod", func(op output.Operation) error {
-		name := "kdo-" + hash
+		name := Name(hash)
 
 		stop := track(k, name, op)
 		defer stop()
 
-		return k.Run("delete", "pod", "kdo-"+hash, "--ignore-not-found", "--now", "--wait=false")
+		return k.Run("delete", "pod", name, "--ignore-not-found", "--wait=false")
 	})
 }
 

@@ -2,6 +2,15 @@ package pod
 
 type object map[string]interface{}
 
+func (o object) num(k string) int {
+	v := map[string]interface{}(o)[k]
+	if v == nil {
+		return 0
+	}
+
+	return int(v.(float64))
+}
+
 func (o object) str(k string) string {
 	v := map[string]interface{}(o)[k]
 	if v == nil {
