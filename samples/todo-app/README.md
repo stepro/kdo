@@ -83,7 +83,7 @@ The `-R` (or `--replace`) flag tells kdo to temporarily replace the frontend ser
 
 Kdo can be configured to enable rapid and effective in-cluster development and debugging. This sample has been pre-configured with both launch and attach debug configurations for Visual Studio Code. To give these a try, open the `frontend` directory in Visual Studio Code and press F5. These configurations have been set up to temporarily replace the baseline instance of the frontend, so you can use the external IP to hit breakpoints and so on.
 
-    Note: before closing Visual Studio Code, make sure to press Ctrl+C on the long-running Kdo Prelaunch or Preattach task to revert the state of the cluster. Issue #25 will remove this requirement.
+> NOTE: before closing Visual Studio Code, make sure to press Ctrl+C on the long-running Kdo Prelaunch or Preattach task to revert the state of the cluster. Issue #25 will remove this requirement.
 
 ## Play around with other components
 
