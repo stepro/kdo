@@ -19,7 +19,21 @@ In all, this extended TODO application is composed of six inter-related componen
 - Kdo CLI (get latest release [here](https://github.com/stepro/kdo/releases))
 - Visual Studio Code (optional)
 
-## Deploy the Application
+## Clone this repository
+
+We'll be working on code in this repository, so clone it:
+
+```
+git clone https://github.com/stepro/kdo
+```
+
+Then, change to the directory for this sample:
+
+```
+cd kdo/samples/todo-app
+```
+
+## Deploy the application
 
 First, create a namespace for the sample:
 
