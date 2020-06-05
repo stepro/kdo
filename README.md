@@ -15,6 +15,10 @@ Kdo requires the `kubectl` CLI to communicate with a Kubernetes cluster and the 
 
 By default `kdo` utilizes the current `kubectl` context, so point it at the Kubernetes cluster of your choice and you're good to go!
 
+## Quickstart
+
+Take a look at the [TODO application sample](samples/todo-app).
+
 ## Examples
 
 Run a command shell in an `alpine` container:

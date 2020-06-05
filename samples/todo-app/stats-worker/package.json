@@ -1,0 +1,16 @@
+{
+  "name": "todo-stats-worker",
+  "version": "1.0.0",
+  "devDependencies": {
+    "nodemon": "^1.18.10"
+  },
+  "dependencies": {
+    "redis": "^2.8.0",
+    "servicebus": "^2.3.3"
+  },
+  "main": "worker.js",
+  "scripts": {
+    "dev": "nodemon",
+    "start": "node worker.js"
+  }
+}
