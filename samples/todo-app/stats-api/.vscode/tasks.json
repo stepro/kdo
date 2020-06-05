@@ -1,0 +1,61 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Kdo Prelaunch",
+            "command": "kdo",
+            "type": "process",
+            "args": [
+                "--namespace", "kdo-todo-app",
+                "--inherit", "svc/stats-api",
+                "--replace",
+                "--sync", "/app",
+                "--forward", "3001:80",
+                "--stdin",
+                ".",
+                "sh"
+            ],
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "."
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Creating pod",
+                    "endsPattern": "^If you don't see a command prompt"
+                }
+            }
+        },
+        {
+            "label": "Kdo Preattach",
+            "command": "kdo",
+            "type": "process",
+            "args": [
+                "--namespace", "kdo-todo-app",
+                "--inherit", "svc/stats-api",
+                "--replace",
+                "--sync", "/app",
+                "--forward", "3001:80",
+                "--forward", "9229:9229",
+                "--stdin",
+                ".",
+                "node_modules/.bin/nodemon",
+                "--inspect-brk=0.0.0.0:9229",
+                "--nolazy",
+                "server.js"
+            ],
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "."
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Creating pod",
+                    "endsPattern": "^If you don't see a command prompt"
+                }
+            }
+        }
+   ]
+}

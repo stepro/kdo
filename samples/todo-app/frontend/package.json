@@ -1,0 +1,28 @@
+{
+  "name": "todo-frontend",
+  "version": "1.0.0",
+  "devDependencies": {
+    "nodemon": "^1.18.9"
+  },
+  "dependencies": {
+    "@zeit/next-css": "^1.0.1",
+    "classnames": "^2.2.6",
+    "express": "^4.16.4",
+    "isomorphic-fetch": "^2.2.1",
+    "lodash": "^4.17.11",
+    "mongodb": "^3.2.3",
+    "next": "^8.0.4",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-rating": "^1.6.2",
+    "react-responsive": "^6.0.1",
+    "request": "^2.88.0",
+    "servicebus": "^2.3.3"
+  },
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon",
+    "build": "next build",
+    "start": "node server.js"
+  }
+}
