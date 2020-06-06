@@ -4,7 +4,6 @@ import (
 	"io"
 	"os/exec"
 	"strconv"
-	"strings"
 
 	"github.com/stepro/kdo/pkg/command"
 	"github.com/stepro/kdo/pkg/output"
@@ -96,11 +95,6 @@ func (k *CLI) StartLines(args []string, fn func(line string), end chan error) fu
 			cmd.Process.Kill()
 		}
 	}
-}
-
-// Apply runs a kubectl apply command
-func (k *CLI) Apply(manifest string) error {
-	return k.Input(strings.NewReader(manifest), "apply", "-f", "-")
 }
 
 // Exec "replaces" the current process with a kubectl command

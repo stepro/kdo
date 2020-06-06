@@ -1,6 +1,7 @@
 package pod
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -340,7 +341,7 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 		data, err := yaml.Marshal(manifest)
 		if err != nil {
 			return err
-		} else if err = k.Apply(string(data)); err != nil {
+		} else if err = k.Input(bytes.NewReader(data), "apply", "-f", "-"); err != nil {
 			return err
 		}
 
