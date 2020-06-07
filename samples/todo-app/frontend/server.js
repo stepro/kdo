@@ -14,7 +14,8 @@ app.prepare().then(() => {
     server.use(bodyParser.json());
 
     const mongo = mongodb.MongoClient.connect(process.env.MONGO_CONNECTION_STRING, {
-        useNewUrlParser: true
+        useNewUrlParser: true,
+        useUnifiedTopology: true
     });
     mongo.then(() => console.log("Connected to Mongo server"));
     mongo.catch(reason => {

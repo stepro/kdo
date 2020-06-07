@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link'
 import fetch from 'isomorphic-fetch'
-import '../static/index.css'
+import '../public/static/index.css'
 
 export default class Stats extends React.Component {
     constructor(props) {

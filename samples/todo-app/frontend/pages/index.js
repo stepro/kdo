@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import TodoApp from '../components/TodoApp'
-import '../static/index.css'
+import '../public/static/index.css'
 
 export default class Index extends Component {
     constructor(props) {
