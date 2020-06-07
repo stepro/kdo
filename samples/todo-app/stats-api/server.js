@@ -18,9 +18,9 @@ app.get('/stats', function (req, res) {
         cache.get('todosCompleted', function (err, completed) {
             cache.get('todosDeleted', function (err, deleted) {
                 res.send({
-                    todosCreated: 10*created || 0,
-                    todosCompleted: 10*completed || 0,
-                    todosDeleted: 10*deleted || 0
+                    todosCreated: created || 0,
+                    todosCompleted: completed || 0,
+                    todosDeleted: deleted || 0
                 });
             });
         });
