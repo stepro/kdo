@@ -38,6 +38,10 @@ app.prepare().then(() => {
 
     var bus = serviceBus.bus({ url: process.env.STATS_QUEUE_URI });
     bus.use(bus.logger());
+    bus.on("error", err => {
+        console.error(err.message)
+        process.exit(1);
+    })
 
     function updateStats(updateEvent) {
         console.log("Pushing stats update: " + updateEvent);
