@@ -21,7 +21,7 @@ import (
 )
 
 var cmd = &cobra.Command{
-	Short:   "kdo is sudo for Kubernetes",
+	Short:   "Kdo: deployless development on Kubernetes",
 	Use:     usage,
 	Version: "0.4.1",
 	Example: examples,

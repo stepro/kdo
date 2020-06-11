@@ -1,11 +1,16 @@
-# <img src="images/logo.png" width="24"> Kdo: sudo for Kubernetes
+# <img src="images/logo.png" width="28"> Kdo: deployless development on Kubernetes
 [![Build](https://img.shields.io/github/workflow/status/stepro/kdo/kdo)](https://github.com/stepro/kdo/actions?query=workflow%3Akdo)
 [![Feature Requests](https://img.shields.io/github/issues/stepro/kdo/feature-request.svg)](https://github.com/stepro/kdo/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc)
 [![Bugs](https://img.shields.io/github/issues/stepro/kdo/bug.svg)](https://github.com/stepro/kdo/issues?q=is%3Aopen+is%3Aissue+label%3Abug)
 
-Kdo is a command line tool that executes commands using the context of a new or existing workload in a Kubernetes cluster. It is modeled after the `sudo` command available on most *nix systems, which executes commands using the context of another user.
+Kdo is a command line tool that enables developers to run, develop and test code changes in a realistic deployed setting without having to deal with the complexity of Kubernetes deployment and configuration.
 
-Kdo is designed primarily for development scenarios where you want to observe how a single command runs inside an image (existing or built on the fly using a Dockerfile) that optionally inherits configuration settings from an existing pod specification.
+With Kdo, you can:
+
+- run a command in a Kubernetes cluster **without any deployment**;
+- build and use a custom image to run a command **without any registry**;
+- inherit pod configuration from an existing workload **instead of deploying**;
+- replace existing pods while running a command to **evaluate end-to-end behavior**.
 
 Kdo can also be used for longer-running connected development sessions where local file updates are pushed into the running container, enabling rapid iteration on code while continuing to run as a properly configured container in the Kubernetes cluster.
 
@@ -98,7 +103,7 @@ Flag | Default | Description
 
 ### Installation flags
 
-These flags are used to manage the kdo server components. These components are installed into the `kube-system` namespace as a daemon set, so using these flags requires administrative access to the cluster.
+These flags are used to manage the kdo server components. These components are installed into the `kube-system` namespace as a daemon set, so using these flags requires administrative access to the Kubernetes cluster.
 
 Flag | Description
 ---- | -----------
@@ -146,7 +151,7 @@ Flag | Default | Description
 
 The `-c, --inherit` flag inherits an existing configuration from a container specification identified in the form `[kind/]name[:container]`, where `kind` is a Kubernetes workload kind (`cronjob`, `daemonset`, `deployment`, `job`, `pod`, `replicaset`, `replicationcontroller` or `statefulset`) or `service` (default is `pod`). If the `kind` is not `pod`, the pod spec is based on the template in the outer workload spec, except in the case of `service`, when it is based on the workload that originally generated the first pod selected by the service. If `container` is not specified, the first container in the pod spec is selected. Init containers are not supported.
 
-Note that even when inheriting an existing configuration, pod labels and annotations are *not* inherited to prevent the cluster from misunderstanding the role of the pod (for instance, automatically being added as an instance behind a service). The `--label` and `--annotate` flags can be used to re-add any labels and annotations that must be included for the pod to function properly.
+Note that even when inheriting an existing configuration, pod labels and annotations are *not* inherited to prevent the Kubernetes cluster from misunderstanding the role of the pod (for instance, automatically being added as an instance behind a service). The `--label` and `--annotate` flags can be used to re-add any labels and annotations that must be included for the pod to function properly.
 
 When inheriting an existing configuration, there are cases when the existing pod lifecycle and probe configuration are not implemented, would cause problems, or are entirely irrelevant for the scenario. The `--no-lifecyle` and `--no-probes` flags can be used to ensure these properties are not inherited.
 
