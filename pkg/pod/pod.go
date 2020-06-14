@@ -21,18 +21,20 @@ func Name(hash string) string {
 
 // Settings represents settings for a pod
 type Settings struct {
-	Inherit     string
-	Labels      []string
-	Annotations []string
-	NoLifecycle bool
-	NoProbes    bool
-	Image       string
-	Env         []string
-	Replace     bool
-	Listen      bool
-	Stdin       bool
-	TTY         bool
-	Command     []string
+	Inherit            string
+	InheritLabels      bool
+	InheritAnnotations bool
+	Labels             []string
+	Annotations        []string
+	NoLifecycle        bool
+	NoProbes           bool
+	Image              string
+	Env                []string
+	Replace            bool
+	Listen             bool
+	Stdin              bool
+	TTY                bool
+	Command            []string
 }
 
 func parseInherit(inherit string) (kind, name, container string, err error) {
@@ -78,7 +80,7 @@ func parseInherit(inherit string) (kind, name, container string, err error) {
 	return
 }
 
-func baseline(k *kubectl.CLI, kind, name, container string) (object, int, string, error) {
+func baseline(k *kubectl.CLI, kind, name string, labels, annotations bool, container string) (object, int, string, object, error) {
 	var manifest object
 	manifest = map[string]interface{}{
 		"apiVersion": "v1",
@@ -86,15 +88,15 @@ func baseline(k *kubectl.CLI, kind, name, container string) (object, int, string
 	}
 
 	if kind == "" {
-		return manifest, 0, "kdo", nil
+		return manifest, 0, "kdo", nil, nil
 	}
 
 	if kind == "service" {
 		pods, err := k.Lines("get", "endpoints", name, "-o", `go-template={{range .subsets}}{{range .addresses}}{{if .targetRef}}{{if eq .targetRef.kind "Pod"}}{{.targetRef.name}}`+"\n"+`{{end}}{{end}}{{end}}{{end}}`)
 		if err != nil {
-			return nil, 0, "", err
+			return nil, 0, "", nil, err
 		} else if len(pods) == 0 {
-			return nil, 0, "", fmt.Errorf(`Unable to determine pod from service "%s"`, name)
+			return nil, 0, "", nil, fmt.Errorf(`Unable to determine pod from service "%s"`, name)
 		}
 		kind = "pod"
 		name = pods[0]
@@ -102,9 +104,9 @@ func baseline(k *kubectl.CLI, kind, name, container string) (object, int, string
 
 	var source object
 	if s, err := k.String("get", kind, name, "-o", "json"); err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", nil, err
 	} else if err = json.Unmarshal([]byte(s), &source); err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", nil, err
 	}
 
 	var replicas int
@@ -118,6 +120,15 @@ func baseline(k *kubectl.CLI, kind, name, container string) (object, int, string
 	} else if kind != "pod" {
 		source = source.obj("spec").obj("template")
 	}
+
+	manifest.with("metadata", func(metadata object) {
+		if labels {
+			metadata.set(source.obj("metadata"), "labels")
+		}
+		if annotations {
+			metadata.set(source.obj("metadata"), "annotations")
+		}
+	})
 
 	manifest.with("spec", func(spec object) {
 		spec.set(source.obj("spec"),
@@ -162,7 +173,7 @@ func baseline(k *kubectl.CLI, kind, name, container string) (object, int, string
 		}
 	}
 
-	return manifest, replicas, container, nil
+	return manifest, replicas, container, source, nil
 }
 
 // Process represents a process in a pod
@@ -222,6 +233,7 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 
 		var selector string
 		if settings.Replace && kind == "service" {
+			op.Progress("identifying pod selector")
 			nameValues, err := k.Lines("get", "service", name, "-o", "go-template={{range $k, $v := .spec.selector}}{{$k}}={{$v}}\n{{end}}")
 			if err != nil {
 				return err
@@ -231,28 +243,54 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 
 		var manifest object
 		var replicas int
-		if manifest, replicas, p.Container, err = baseline(k, kind, name, container); err != nil {
+		var source object
+		op.Progress("inheriting pod configuration")
+		if manifest, replicas, p.Container, source, err = baseline(k, kind, name, settings.InheritLabels, settings.InheritAnnotations, container); err != nil {
 			return err
 		}
+
+		op.Progress("generating manifest")
 		manifest.with("metadata", func(metadata object) {
 			metadata["name"] = p.Pod
 			metadata.with("labels", func(labels object) {
+				var sourceLabels object
+				if source != nil {
+					if sourceLabels = source.obj("metadata"); sourceLabels != nil {
+						sourceLabels = sourceLabels.obj("labels")
+					}
+				}
 				for _, label := range settings.Labels {
 					nameValue := strings.SplitN(label, "=", 2)
 					if len(nameValue) == 1 {
-						nameValue = []string{nameValue[0], ""}
+						if sourceLabels != nil && sourceLabels[nameValue[0]] != nil {
+							labels[nameValue[0]] = sourceLabels[nameValue[0]]
+						}
+					} else if nameValue[1] != "" {
+						labels[nameValue[0]] = nameValue[1]
+					} else {
+						delete(labels, nameValue[0])
 					}
-					labels[nameValue[0]] = nameValue[1]
 				}
 				labels["kdo-pod"] = "1"
 				labels["kdo-hash"] = hash
 			}).with("annotations", func(annotations object) {
+				var sourceAnnotations object
+				if source != nil {
+					if sourceAnnotations = source.obj("metadata"); sourceAnnotations != nil {
+						sourceAnnotations = sourceAnnotations.obj("annotations")
+					}
+				}
 				for _, annotation := range settings.Annotations {
 					nameValue := strings.SplitN(annotation, "=", 2)
 					if len(nameValue) == 1 {
-						nameValue = []string{nameValue[0], ""}
+						if sourceAnnotations != nil && sourceAnnotations[nameValue[0]] != nil {
+							annotations[nameValue[0]] = sourceAnnotations[nameValue[0]]
+						}
+					} else if nameValue[1] != "" {
+						annotations[nameValue[0]] = nameValue[1]
+					} else {
+						delete(annotations, nameValue[0])
 					}
-					annotations[nameValue[0]] = nameValue[1]
 				}
 			})
 		}).with("spec", func(spec object) {

@@ -88,13 +88,15 @@ var flags struct {
 		target string
 	}
 	config struct {
-		inherit     string
-		labels      []string
-		annotations []string
-		noLifecycle bool
-		noProbes    bool
-		env         []string
-		replace     bool
+		inherit            string
+		inheritLabels      bool
+		labels             []string
+		inheritAnnotations bool
+		annotations        []string
+		noLifecycle        bool
+		noProbes           bool
+		env                []string
+		replace            bool
 	}
 	session struct {
 		sync   []string
@@ -163,10 +165,14 @@ func init() {
 	// Configuration flags
 	cmd.Flags().StringVarP(&flags.config.inherit,
 		"inherit", "c", "", "inherit an existing configuration")
+	cmd.Flags().BoolVarP(&flags.config.inheritLabels,
+		"inherit-labels", "L", false, "inherit pod labels")
+	cmd.Flags().BoolVarP(&flags.config.inheritAnnotations,
+		"inherit-annotations", "A", false, "inherit pod annotations")
 	cmd.Flags().StringArrayVar(&flags.config.labels,
-		"label", nil, "set pod labels (never inherited)")
+		"label", nil, "inherit, set or remove pod labels")
 	cmd.Flags().StringArrayVar(&flags.config.annotations,
-		"annotate", nil, "set pod annotations (never inherited)")
+		"annotate", nil, "inherit, set or remove pod annotations")
 	cmd.Flags().BoolVar(&flags.config.noLifecycle,
 		"no-lifecycle", false, "do not inherit lifecycle configuration")
 	cmd.Flags().BoolVar(&flags.config.noProbes,
@@ -448,14 +454,18 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	p, err := pod.Apply(k, hash, build, &pod.Settings{
-		Inherit: flags.config.inherit,
-		Image:   image,
-		Env:     flags.config.env,
-		Replace: flags.config.replace,
-		Listen:  len(flags.session.listen) > 0,
-		Stdin:   flags.command.stdin,
-		TTY:     flags.command.tty,
-		Command: command,
+		Inherit:            flags.config.inherit,
+		InheritLabels:      flags.config.inheritLabels,
+		InheritAnnotations: flags.config.inheritAnnotations,
+		Labels:             flags.config.labels,
+		Annotations:        flags.config.annotations,
+		Image:              image,
+		Env:                flags.config.env,
+		Replace:            flags.config.replace,
+		Listen:             len(flags.session.listen) > 0,
+		Stdin:              flags.command.stdin,
+		TTY:                flags.command.tty,
+		Command:            command,
 	}, out)
 	if err != nil {
 		return err
