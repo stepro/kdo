@@ -49,6 +49,13 @@ kubectl apply -n kdo-todo-app -f deployment.yaml
 
 This is a simple deployment that exposes the frontend using a service of type `LoadBalancer`. Wait for all the pods to be running and for the external IP of the `frontend` service to become available.
 
+```
+kubectl get services -n kdo-todo-app
+
+NAME          TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)        AGE
+frontend      LoadBalancer   10.0.49.177    52.149.235.179   80:30145/TCP   18h
+```
+
 Browse to the application using the external IP and give it a spin. As you add, complete and delete todos, notice that the stats page updates with the expected metrics.
 
 ## Develop changes to the frontend
