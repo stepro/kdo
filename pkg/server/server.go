@@ -13,7 +13,6 @@ var manifest = `
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  namespace: kube-system
   name: kdo-server
   labels:
     component: kdo-server
@@ -26,7 +25,6 @@ data:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  namespace: kube-system
   name: kdo-server
   labels:
     component: kdo-server
@@ -72,7 +70,7 @@ spec:
 func Install(k *kubectl.CLI, out *output.Interface) error {
 	return out.Do("Installing server components", func(op output.Operation) error {
 		op.Progress("applying manifests")
-		if err := k.Apply(manifest); err != nil {
+		if err := k.Input(strings.NewReader(manifest), "--namespace", "kube-system", "apply", "-f", "-"); err != nil {
 			return err
 		}
 

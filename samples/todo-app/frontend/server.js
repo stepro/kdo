@@ -14,7 +14,8 @@ app.prepare().then(() => {
     server.use(bodyParser.json());
 
     const mongo = mongodb.MongoClient.connect(process.env.MONGO_CONNECTION_STRING, {
-        useNewUrlParser: true
+        useNewUrlParser: true,
+        useUnifiedTopology: true
     });
     mongo.then(() => console.log("Connected to Mongo server"));
     mongo.catch(reason => {
@@ -37,6 +38,10 @@ app.prepare().then(() => {
 
     var bus = serviceBus.bus({ url: process.env.STATS_QUEUE_URI });
     bus.use(bus.logger());
+    bus.on("error", err => {
+        console.error(err.message)
+        process.exit(1);
+    })
 
     function updateStats(updateEvent) {
         console.log("Pushing stats update: " + updateEvent);

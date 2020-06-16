@@ -11,15 +11,11 @@
             "preLaunchTask": "Kdo Prelaunch",
             "runtimeExecutable": "kdo",
             "runtimeArgs": [
-                "--namespace",
-                "kdo-todo-app",
-                "--inherit",
-                "svc/stats-api",
-                "--forward",
-                "9229:9229",
+                "--namespace=kdo-todo-app",
+                "--inherit=svc/stats-api",
+                "--forward=9229:9229",
                 "--exec",
-                "--prekill",
-                "node",
+                "--prekill=node",
                 "--stdin",
                 ".",
                 "node",
@@ -46,11 +42,6 @@
                 "<node_internals>/**"
             ],
             "restart": true
-        },
-        {
-            "name": "Local Process with Kubernetes (Preview)",
-            "type": "dev-spaces-connect-configuration",
-            "request": "launch"
         }
     ]
 }

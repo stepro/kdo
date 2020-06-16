@@ -3,6 +3,10 @@ var redis = require('redis');
 
 var bus = serviceBus.bus({ url: process.env.STATS_QUEUE_URI });
 bus.use(bus.logger());
+bus.on("error", err => {
+    console.error(err.message)
+    process.exit(1);
+})
 
 var cache = redis.createClient({
     host: process.env.REDIS_HOST,
