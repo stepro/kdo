@@ -295,7 +295,7 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 			})
 		}).with("spec", func(spec object) {
 			if build != nil {
-				spec.append("initContainers", map[string]interface{}{
+				spec.appendobj("initContainers", map[string]interface{}{
 					"name":  "kdo-await-image-build",
 					"image": "docker:19.03",
 					"volumeMounts": []map[string]interface{}{
@@ -309,7 +309,7 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 						"-c",
 						`while [ -z "$(docker images ` + settings.Image + ` --format '{{.Repository}}')" ]; do sleep 1; done`,
 					},
-				}).append("volumes", map[string]interface{}{
+				}).appendobj("volumes", map[string]interface{}{
 					"name": "kdo-docker-socket",
 					"hostPath": map[string]interface{}{
 						"path": "/var/run/docker.sock",
@@ -370,7 +370,7 @@ func Apply(k *kubectl.CLI, hash string, build func(dockerPod string, op output.O
 							"while true; do sleep 1; done",
 						name, selector, name, hash)}
 				}
-				spec.append("containers", replacer)
+				spec.appendobj("containers", replacer)
 			}
 			spec["restartPolicy"] = "Never"
 		})

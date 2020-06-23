@@ -3,7 +3,7 @@ package pod
 type object map[string]interface{}
 
 func (o object) num(k string) int {
-	v := map[string]interface{}(o)[k]
+	v := o[k]
 	if v == nil {
 		return 0
 	}
@@ -12,7 +12,7 @@ func (o object) num(k string) int {
 }
 
 func (o object) str(k string) string {
-	v := map[string]interface{}(o)[k]
+	v := o[k]
 	if v == nil {
 		return ""
 	}
@@ -52,58 +52,50 @@ func (o object) arr(k string) array {
 	return v.([]interface{})
 }
 
-func (o object) each(k string, fn func(o object)) object {
+func (o object) appendobj(k string, elem object) object {
 	v := o[k]
-	if v != nil {
-		for _, elem := range v.([]interface{}) {
-			fn(elem.(map[string]interface{}))
-		}
+	if v == nil {
+		v = []interface{}{}
 	}
+
+	o[k] = append(v.([]interface{}), map[string]interface{}(elem))
 
 	return o
 }
 
 func (o object) withelem(k string, name string, fn func(o object)) object {
 	v := o[k]
+	var obj map[string]interface{}
 	if v != nil {
 		for _, elem := range v.([]interface{}) {
-			obj := elem.(map[string]interface{})
+			obj = elem.(map[string]interface{})
 			if obj["name"] == name {
-				fn(obj)
-				return o
+				break
 			}
+			obj = nil
 		}
 	}
 
-	elem := map[string]interface{}{
-		"name": name,
+	if obj == nil {
+		obj = map[string]interface{}{
+			"name": name,
+		}
+		o.appendobj(k, obj)
 	}
-	o.append(k, elem)
-	fn(elem)
+
+	fn(obj)
 
 	return o
 }
 
-func (o object) set(from object, k ...string) object {
+func (o object) set(src object, k ...string) object {
 	for _, k := range k {
-		v := from[k]
+		v := src[k]
 		if v == nil {
 			continue
 		}
-
 		o[k] = v
 	}
-
-	return o
-}
-
-func (o object) append(k string, elem object) object {
-	v := o[k]
-	if v == nil {
-		v = []interface{}{}
-	}
-
-	o[k] = append(v.([]interface{}), elem)
 
 	return o
 }
