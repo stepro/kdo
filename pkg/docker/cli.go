@@ -14,24 +14,20 @@ type Options struct {
 }
 
 // CLI represents the docker CLI
-type CLI struct {
+type CLI interface {
+	// EachLine runs a docker command that sends
+	// its lines of standard output to a callback
+	EachLine(args []string, fn func(line string)) error
+}
+
+type cli struct {
 	path string
 	opt  *Options
 	out  *output.Interface
 	verb output.Level
 }
 
-// NewCLI creates a new docker CLI object
-func NewCLI(path string, options *Options, out *output.Interface, verb output.Level) *CLI {
-	return &CLI{
-		path: path,
-		opt:  options,
-		out:  out,
-		verb: verb,
-	}
-}
-
-func (d *CLI) command(arg ...string) *exec.Cmd {
+func (d *cli) command(arg ...string) *exec.Cmd {
 	cmd := exec.Command(d.path)
 
 	var globalOptions []string
@@ -46,8 +42,16 @@ func (d *CLI) command(arg ...string) *exec.Cmd {
 	return cmd
 }
 
-// EachLine runs a docker command and streams its lines
-// of standard output as strings to a callback function
-func (d *CLI) EachLine(args []string, fn func(line string)) error {
+func (d *cli) EachLine(args []string, fn func(line string)) error {
 	return command.EachLine(d.command(args...), d.out, d.verb, fn)
+}
+
+// NewCLI creates a new docker CLI object
+func NewCLI(path string, options *Options, out *output.Interface, verb output.Level) CLI {
+	return &cli{
+		path: path,
+		opt:  options,
+		out:  out,
+		verb: verb,
+	}
 }

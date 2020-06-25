@@ -9,7 +9,7 @@ import (
 	"github.com/stepro/kdo/pkg/output"
 )
 
-func track(k *kubectl.CLI, pod string, op output.Operation) func() {
+func track(k kubectl.CLI, pod string, op output.Operation) func() {
 	timestamp := time.Now().In(time.UTC).Format(time.RFC3339)
 
 	return k.StartLines([]string{"get", "--raw=/api/v1/events?fieldSelector=involvedObject.name=" + pod + "&watch=1"}, func(line string) {
@@ -25,7 +25,7 @@ func track(k *kubectl.CLI, pod string, op output.Operation) func() {
 		msg := obj["message"].(string)
 		msg = strings.ToLower(msg[:1]) + msg[1:]
 		if msg == "started container kdo-await-image-build" {
-			msg = "<awaiting image build>"
+			msg = "awaiting image build"
 		}
 		op.Progress("%s", msg)
 	}, nil)

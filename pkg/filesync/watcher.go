@@ -92,7 +92,6 @@ func compare(baseline fileinfos, latest fileinfos) (added []string, updated []st
 }
 
 func start(dir string, fn func(added []string, updated []string, deleted []string)) error {
-	// Read patterns from .dockerignore file, if any
 	var patterns []string
 	f, err := os.Open(dir + "/.dockerignore")
 	if err == nil {
@@ -103,16 +102,13 @@ func start(dir string, fn func(added []string, updated []string, deleted []strin
 		}
 	}
 
-	// Create pattern matcher
 	pm, err := fileutils.NewPatternMatcher(patterns)
 	if err != nil {
 		return err
 	}
 
-	// Initialize baseline
 	baseline := find(dir, pm)
 
-	// Loop and watch for changes
 	go func() {
 		for {
 			time.Sleep(interval)

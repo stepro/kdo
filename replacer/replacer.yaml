@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kdo-replacer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kdo-replacer
+subjects:
+- kind: ServiceAccount
+  name: kdo-replacer
+  namespace: kdo-todo-app
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kdo-replacer
+spec:
+  template:
+    spec:
+      serviceAccountName: kdo-replacer
+      containers:
+      - name: replacer
+        image: stephpr/kdo-replacer
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: KIND
+          value: deployment
+        - name: NAME
+          value: stats-api
+        - name: REPLICAS
+          value: "2"
+        - name: POD
+          value: kdo-fda8b2676c65b30e
+      restartPolicy: OnFailure

@@ -18,24 +18,30 @@ type Options struct {
 }
 
 // CLI represents the kubectl CLI
-type CLI struct {
+type CLI interface {
+	// Run runs a kubectl command
+	Run(arg ...string) error
+	// Input runs a kubectl command with input
+	Input(input io.Reader, arg ...string) error
+	// String runs a kubectl command that outputs a string
+	String(arg ...string) (string, error)
+	// Lines runs a kubectl command that outputs multiple lines
+	Lines(arg ...string) ([]string, error)
+	// StartLines starts a kubectl command that
+	// sends its lines of output to a callback
+	StartLines(args []string, fn func(line string), end chan error) func()
+	// Exec simulates replacing the current process with a kubectl command
+	Exec(arg ...string) error
+}
+
+type cli struct {
 	path string
 	opt  *Options
 	out  *output.Interface
 	verb output.Level
 }
 
-// NewCLI creates a new kubectl CLI object
-func NewCLI(path string, options *Options, out *output.Interface, verb output.Level) *CLI {
-	return &CLI{
-		path: path,
-		opt:  options,
-		out:  out,
-		verb: verb,
-	}
-}
-
-func (k *CLI) command(arg ...string) *exec.Cmd {
+func (k *cli) command(arg ...string) *exec.Cmd {
 	cmd := exec.Command(k.path)
 
 	var globalOptions []string
@@ -56,31 +62,25 @@ func (k *CLI) command(arg ...string) *exec.Cmd {
 	return cmd
 }
 
-// Run runs a kubectl command
-func (k *CLI) Run(arg ...string) error {
+func (k *cli) Run(arg ...string) error {
 	return command.Run(k.command(arg...), k.out, k.verb)
 }
 
-// Input runs a kubectl command with input
-func (k *CLI) Input(input io.Reader, arg ...string) error {
+func (k *cli) Input(input io.Reader, arg ...string) error {
 	cmd := k.command(arg...)
 	cmd.Stdin = input
 	return command.Run(cmd, k.out, k.verb)
 }
 
-// String runs a kubectl command that outputs a string
-func (k *CLI) String(arg ...string) (string, error) {
+func (k *cli) String(arg ...string) (string, error) {
 	return command.String(k.command(arg...), k.out, k.verb)
 }
 
-// Lines runs a kubectl command that outputs multiple lines
-func (k *CLI) Lines(arg ...string) ([]string, error) {
+func (k *cli) Lines(arg ...string) ([]string, error) {
 	return command.Lines(k.command(arg...), k.out, k.verb)
 }
 
-// StartLines starts a long-running kubectl command that
-// sends its lines of standard output to a callback function
-func (k *CLI) StartLines(args []string, fn func(line string), end chan error) func() {
+func (k *cli) StartLines(args []string, fn func(line string), end chan error) func() {
 	cmd := k.command(args...)
 
 	go func() {
@@ -97,7 +97,16 @@ func (k *CLI) StartLines(args []string, fn func(line string), end chan error) fu
 	}
 }
 
-// Exec "replaces" the current process with a kubectl command
-func (k *CLI) Exec(arg ...string) error {
+func (k *cli) Exec(arg ...string) error {
 	return command.Exec(k.command(arg...), k.out, k.verb)
+}
+
+// NewCLI creates a new kubectl CLI object
+func NewCLI(path string, options *Options, out *output.Interface, verb output.Level) CLI {
+	return &cli{
+		path: path,
+		opt:  options,
+		out:  out,
+		verb: verb,
+	}
 }
