@@ -88,16 +88,14 @@ var flags struct {
 		imagebuild.Options
 	}
 	config struct {
-		inherit struct {
-			source      string
-			labels      bool
-			annotations bool
-		}
-		labels      []string
-		annotations []string
-		noLifecycle bool
-		noProbes    bool
-		env         []string
+		inherit            string
+		inheritLabels      bool
+		inheritAnnotations bool
+		labels             []string
+		annotations        []string
+		env                []string
+		noLifecycle        bool
+		noProbes           bool
 	}
 	replace bool
 	session struct {
@@ -166,22 +164,22 @@ func init() {
 		"build-target", "", "dockerfile target to build")
 
 	// Configuration flags
-	cmd.Flags().StringVarP(&flags.config.inherit.source,
+	cmd.Flags().StringVarP(&flags.config.inherit,
 		"inherit", "c", "", "inherit an existing configuration")
-	cmd.Flags().BoolVarP(&flags.config.inherit.labels,
+	cmd.Flags().BoolVarP(&flags.config.inheritLabels,
 		"inherit-labels", "L", false, "inherit pod labels")
-	cmd.Flags().BoolVarP(&flags.config.inherit.annotations,
+	cmd.Flags().BoolVarP(&flags.config.inheritAnnotations,
 		"inherit-annotations", "A", false, "inherit pod annotations")
 	cmd.Flags().StringArrayVar(&flags.config.labels,
 		"label", nil, "inherit, set or remove pod labels")
 	cmd.Flags().StringArrayVar(&flags.config.annotations,
 		"annotate", nil, "inherit, set or remove pod annotations")
-	cmd.Flags().BoolVar(&flags.config.noLifecycle,
-		"no-lifecycle", false, "do not inherit lifecycle configuration")
-	cmd.Flags().BoolVar(&flags.config.noProbes,
-		"no-probes", false, "do not inherit probes configuration")
 	cmd.Flags().StringArrayVarP(&flags.config.env,
 		"env", "e", nil, "set container environment variables")
+	cmd.Flags().BoolVar(&flags.config.noLifecycle,
+		"no-lifecycle", false, "do not inherit container lifecycle")
+	cmd.Flags().BoolVar(&flags.config.noProbes,
+		"no-probes", false, "do not inherit container probes")
 
 	// Replace flag
 	cmd.Flags().BoolVarP(&flags.replace,
@@ -261,10 +259,8 @@ func init() {
 	cmd.SilenceErrors = true
 }
 
-func parseInherit(source string, labels bool, annotations bool) (*pod.Inheritance, error) {
-	var kind string
-	var name string
-	kindName := strings.SplitN(source, "/", 2)
+func parseInherit(flag string) (kind, name, container string, err error) {
+	kindName := strings.SplitN(flag, "/", 2)
 	if len(kindName) == 1 {
 		kind = "pod"
 		name = kindName[0]
@@ -273,7 +269,8 @@ func parseInherit(source string, labels bool, annotations bool) (*pod.Inheritanc
 		kind = strings.ToLower(kind)
 		switch kind {
 		default:
-			return nil, fmt.Errorf(`unknown kind "%s"`, kindName[0])
+			err = fmt.Errorf(`unknown kind "%s"`, kindName[0])
+			return
 		case "cj", "cronjob", "cronjobs":
 			kind = "cronjob"
 		case "ds", "daemonset", "daemonsets":
@@ -296,20 +293,13 @@ func parseInherit(source string, labels bool, annotations bool) (*pod.Inheritanc
 		name = kindName[1]
 	}
 
-	var container string
 	nameContainer := strings.SplitN(name, ":", 2)
 	if len(nameContainer) == 2 {
 		name = nameContainer[0]
 		container = nameContainer[1]
 	}
 
-	return &pod.Inheritance{
-		Kind:        kind,
-		Name:        name,
-		Labels:      labels,
-		Annotations: annotations,
-		Container:   container,
-	}, nil
+	return
 }
 
 func parseKeyValues(flags []string) map[string]*string {
@@ -355,6 +345,8 @@ func parseSync(flags []string) ([]filesync.Rule, error) {
 	return rules, nil
 }
 
+var exitCode int
+
 func run(cmd *cobra.Command, args []string) error {
 	var k = kubectl.NewCLI(
 		flags.kubectl.path,
@@ -381,7 +373,7 @@ func run(cmd *cobra.Command, args []string) error {
 		return server.Uninstall(k, out)
 	}
 
-	if flags.config.inherit.source == "" && flags.replace {
+	if flags.config.inherit == "" && flags.replace {
 		return errors.New("cannot specify -R,--replace flag without -c,--inherit flag")
 	}
 	if len(flags.session.sync) > 0 && (len(args) == 0 || !strings.HasPrefix(args[0], ".")) {
@@ -436,7 +428,7 @@ func run(cmd *cobra.Command, args []string) error {
 		}
 		hash = buildDir
 	}
-	hash = fmt.Sprintf("%s\n%s\n%s", flags.scope, hash, flags.config.inherit.source)
+	hash = fmt.Sprintf("%s\n%s\n%s", flags.scope, hash, flags.config.inherit)
 	hash = fmt.Sprintf("%x", sha1.Sum([]byte(hash)))[:16]
 	if buildDir != "" {
 		image = fmt.Sprintf("kdo-%s:%d", hash, time.Now().UnixNano())
@@ -447,45 +439,66 @@ func run(cmd *cobra.Command, args []string) error {
 		return pod.Delete(k, hash, out)
 	}
 
-	var inherit *pod.Inheritance
-	if flags.config.inherit.source != "" {
-		flag := flags.config.inherit
-		if inherit, err = parseInherit(flag.source, flag.labels, flag.annotations); err != nil {
+	var inheritKind string
+	var inheritName string
+	var container string
+	if flags.config.inherit != "" {
+		if inheritKind, inheritName, container, err = parseInherit(flags.config.inherit); err != nil {
 			return err
 		}
 	}
 
 	if flags.command.exec {
-		var container string
-		if inherit != nil {
-			container = inherit.Container
-		}
 		return pod.Exec(k, hash, container, flags.command.prekill, flags.session.forward, flags.command.stdin, flags.command.tty, command...)
 	}
+
+	var build func(pod string) error
+	if buildDir != "" {
+		build = func(pod string) error {
+			d := docker.NewCLI(
+				flags.build.docker.path,
+				&flags.build.docker.Options,
+				out, output.LevelVerbose)
+			return imagebuild.Build(k, pod, d, &flags.build.Options, image, buildDir, out)
+		}
+	}
+
+	// var selector string
+	// if config.InheritKind == "service" && config.Replace {
+	// 	op.Progress("determining pod selector")
+	// 	nameValues, err := k.Lines("get", "service", config.InheritName, "-o", "go-template={{range $k, $v := .spec.selector}}{{$k}}={{$v}}\n{{end}}")
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	selector = strings.Join(nameValues, ",")
+	// }
 
 	syncRules, err := parseSync(flags.session.sync)
 	if err != nil {
 		return err
 	}
 
-	var p pod.Process
-	// p, err := pod.Apply(k, hash, build, &pod.Settings{
-	// 	Inherit:            flags.config.inherit,
-	// 	InheritLabels:      flags.config.inheritLabels,
-	// 	InheritAnnotations: flags.config.inheritAnnotations,
-	// 	Labels:             flags.config.labels,
-	// 	Annotations:        flags.config.annotations,
-	// 	Image:              image,
-	// 	Env:                flags.config.env,
-	// 	Replace:            flags.config.replace,
-	// 	Listen:             len(flags.session.listen) > 0,
-	// 	Stdin:              flags.command.stdin,
-	// 	TTY:                flags.command.tty,
-	// 	Command:            command,
-	// }, out)
-	// if err != nil {
-	// 	return err
-	// }
+	p, err := pod.Apply(k, hash, &pod.Config{
+		InheritKind:        inheritKind,
+		InheritName:        inheritName,
+		InheritLabels:      flags.config.inheritLabels,
+		InheritAnnotations: flags.config.inheritAnnotations,
+		Labels:             parseKeyValues(flags.config.labels),
+		Annotations:        parseKeyValues(flags.config.annotations),
+		Container:          container,
+		Image:              image,
+		Env:                parseKeyValues(flags.config.env),
+		NoLifecycle:        flags.config.noLifecycle,
+		NoProbes:           flags.config.noProbes,
+		Replace:            flags.replace,
+		Stdin:              flags.command.stdin,
+		TTY:                flags.command.tty,
+		Command:            command,
+		Detach:             flags.detach,
+	}, build, out)
+	if err != nil {
+		return err
+	}
 
 	if flags.detach {
 		return nil
@@ -514,26 +527,23 @@ func run(cmd *cobra.Command, args []string) error {
 		// TODO
 	}
 
+	var cmdArgs []string
 	if flags.command.stdin && !p.Exited() {
 		if err = k.Exec("logs", p.Pod, "--container", p.Container); err != nil {
 			return err
 		}
-		attachArgs := []string{"attach", p.Pod, "--container", p.Container, "--stdin"}
+		cmdArgs = []string{"attach", p.Pod, "--container", p.Container, "--stdin"}
 		if flags.command.tty {
-			attachArgs = append(attachArgs, "--tty")
+			cmdArgs = append(cmdArgs, "--tty")
 		}
-		return k.Exec(attachArgs...)
+	} else {
+		cmdArgs = []string{"logs", "--follow", p.Pod, "--container", p.Container}
 	}
 
-	if err = k.Exec("logs", "--follow", p.Pod, "--container", p.Container); err != nil {
+	if err = k.Exec(cmdArgs...); err != nil {
 		return err
-	} else if code, err := p.ExitCode(); err != nil {
+	} else if exitCode, err = p.ExitCode(); err != nil {
 		return err
-	} else if code != 0 {
-		if out != nil {
-			out.Close()
-		}
-		os.Exit(code)
 	}
 
 	return nil
@@ -551,6 +561,8 @@ func main() {
 		} else {
 			exitCode = exitErr.ExitCode()
 		}
+		os.Exit(exitCode)
+	} else if exitCode != 0 {
 		os.Exit(exitCode)
 	}
 }

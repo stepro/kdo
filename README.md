@@ -144,19 +144,19 @@ Flag | Default | Description
 `-A, --inherit-annotations` | `false` | inherit pod annotations
 `--label` | `[]` | inherit, set or remove pod labels in the form `name[=[value]]`
 `--annotate` | `[]` | inherit, set or remove pod annotations in the form `name[=[value]]`
-`--no-lifecycle` | `false` | do not inherit lifecycle configuration
-`--no-probes` | `false` | do not inherit probes configuration
 `-e, --env` | `[]` | set container environment variables in the form `name=value`
+`--no-lifecycle` | `false` | do not inherit container lifecycle
+`--no-probes` | `false` | do not inherit container probes
 
-The `-c, --inherit` flag inherits an existing configuration from a container specification identified in the form `[kind/]name[:container]`, where `kind` is a Kubernetes workload kind (`cronjob`, `daemonset`, `deployment`, `job`, `pod`, `replicaset`, `replicationcontroller` or `statefulset`) or `service` (default is `pod`). If the `kind` is not `pod`, the pod spec is based on the template in the outer workload spec, except in the case of `service`, when it is based on the workload that originally generated the first pod selected by the service. If `container` is not specified, the first container in the pod spec is selected. Init containers are not supported.
+The `-c, --inherit` flag inherits an existing configuration and selects a container in the form `[kind/]name[:container]`, where `kind` is a Kubernetes workload kind (`cronjob`, `daemonset`, `deployment`, `job`, `pod`, `replicaset`, `replicationcontroller` or `statefulset`) or `service` (default is `pod`). If the `kind` is not `pod`, the pod spec is based on the template in the outer workload spec, except in the case of `service`, when it is based on the workload that originally generated the first pod selected by the service. If `container` is not specified, the first container in the pod spec is selected. Init containers are not supported.
 
 By default, when inheriting an existing configuration, pod labels and annotations are *not* inherited to prevent the Kubernetes cluster from misunderstanding the role of the pod (for instance, automatically being added as an instance behind a service). The `--inherit-labels` and/or `--inherit-annotations` flags can be used to override this behavior.
 
 Whether or not labels or annotations are inherited, the final set of label or annotation entries can be customized using the `--label` and `--annotate` flags. If a value is simply in the form `name`, then its entry is inherited. If a value is in the form `name=value`, it adds or overrides any existing entry. Lastly, if a value is in the form `name=`, it removes an entry that may otherwise be inherited.
 
-When inheriting an existing configuration, there are cases when the existing pod lifecycle and probe configuration are not implemented, would cause problems, or are entirely irrelevant for the scenario. The `--no-lifecyle` and `--no-probes` flags can be used to ensure these properties are not inherited.
+The `-e, --env` flags set container environment variables, and in the case of an inherited configuration, override any inherited environment variables.
 
-The `-e, --env` flags set environment variables, and in the case of an inherited configuration, override any inherited environment variables.
+When inheriting an existing configuration, there are cases when the existing container lifecycle and probe configuration are not implemented, would cause problems, or are entirely irrelevant for the scenario. The `--no-lifecyle` and `--no-probes` flags can be used to ensure these properties are not inherited.
 
 ### Replace flag
 

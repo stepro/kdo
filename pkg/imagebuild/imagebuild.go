@@ -32,7 +32,8 @@ func Build(k kubectl.CLI, pod string, d docker.CLI, options *Options, image stri
 		op.Progress("determining build node")
 		var node string
 		for {
-			node, err := k.String("get", "pod", pod, "--output", `go-template={{.spec.nodeName}}`)
+			var err error
+			node, err = k.String("get", "pod", pod, "--output", `go-template={{.spec.nodeName}}`)
 			if err != nil {
 				return err
 			} else if node != "" {

@@ -2,11 +2,12 @@ package pod
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/stepro/kdo/pkg/kubectl"
 )
 
-// Process represents a process in a pod
+// Process represents the main process in a container
 type Process struct {
 	k         kubectl.CLI
 	Pod       string
@@ -19,17 +20,26 @@ func (p *Process) Exited() bool {
 	return p.exitCode != nil
 }
 
-// ExitCode gets the exit code of the process
+// ExitCode waits for the process to complete and gets its exit code
 func (p *Process) ExitCode() (int, error) {
 	if p.exitCode == nil {
-		value, err := p.k.String("get", "pod", p.Pod, "--output", `go-template={{range .status.containerStatuses}}{{if eq .name "`+p.Container+`"}}{{if .state.terminated}}{{.state.terminated.exitCode}}{{end}}{{end}}{{end}}`)
-		if err != nil || value == "" {
-			return 0, err
-		} else if code, err := strconv.Atoi(value); err != nil {
-			return 0, err
-		} else {
-			p.exitCode = &code
+		var value string
+		var err error
+		for {
+			value, err = p.k.String("get", "pod", p.Pod, "--output", `go-template={{range .status.containerStatuses}}{{if eq .name "`+p.Container+`"}}{{if .state.terminated}}{{.state.terminated.exitCode}}{{end}}{{end}}{{end}}`)
+			if err != nil {
+				return 0, err
+			} else if value == "" {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			break
 		}
+		code, err := strconv.Atoi(value)
+		if err != nil {
+			return 0, err
+		}
+		p.exitCode = &code
 	}
 	return *p.exitCode, nil
 }
