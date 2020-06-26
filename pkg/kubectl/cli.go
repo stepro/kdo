@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"bytes"
 	"io"
 	"os/exec"
 	"strconv"
@@ -25,6 +26,8 @@ type CLI interface {
 	Input(input io.Reader, arg ...string) error
 	// String runs a kubectl command that outputs a string
 	String(arg ...string) (string, error)
+	// ErrorString runs a kubectl command that outputs an error string
+	ErrorString(arg ...string) (string, error)
 	// Lines runs a kubectl command that outputs multiple lines
 	Lines(arg ...string) ([]string, error)
 	// StartLines starts a kubectl command that
@@ -74,6 +77,18 @@ func (k *cli) Input(input io.Reader, arg ...string) error {
 
 func (k *cli) String(arg ...string) (string, error) {
 	return command.String(k.command(arg...), k.out, k.verb)
+}
+
+func (k *cli) ErrorString(arg ...string) (string, error) {
+	cmd := k.command(arg...)
+	stderr := &bytes.Buffer{}
+	cmd.Stderr = stderr
+
+	if err := command.Run(cmd, k.out, k.verb); err != nil {
+		return string(stderr.Bytes()), err
+	}
+
+	return "", nil
 }
 
 func (k *cli) Lines(arg ...string) ([]string, error) {

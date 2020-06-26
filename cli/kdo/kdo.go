@@ -19,6 +19,7 @@ import (
 	"github.com/stepro/kdo/pkg/output"
 	"github.com/stepro/kdo/pkg/pod"
 	"github.com/stepro/kdo/pkg/portforward"
+	"github.com/stepro/kdo/pkg/replacer"
 	"github.com/stepro/kdo/pkg/server"
 )
 
@@ -368,6 +369,10 @@ func run(cmd *cobra.Command, args []string) error {
 			return errors.New("cannot specify command or arguments with --uninstall flag")
 		}
 		if err := pod.DeleteAll(k, true, out); err != nil {
+			return err
+		} else if err = replacer.WaitAll(k, out); err != nil {
+			return err
+		} else if err = replacer.Uninstall(k, out); err != nil {
 			return err
 		}
 		return server.Uninstall(k, out)

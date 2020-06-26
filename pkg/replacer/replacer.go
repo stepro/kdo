@@ -21,11 +21,15 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kdo-replacer
+  labels:
+    component: kdo-rbac
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: kdo-replacer
+  labels:
+    component: kdo-rbac
 rules:
 - apiGroups: [""]
   resources: [pods]
@@ -50,6 +54,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: kdo-replacer
+  labels:
+    component: kdo-rbac
 subjects:
 - kind: ServiceAccount
   name: kdo-replacer
@@ -62,6 +68,8 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: kdo-replacer-{hash}
+  labels:
+    kdo-job: "1"
 spec:
   template:
     spec:
@@ -142,13 +150,34 @@ func Apply(k kubectl.CLI, kind, name string, replicas int, selector string, hash
 
 // Wait waits for a replacer associated with a hash to complete (be deleted)
 func Wait(k kubectl.CLI, hash string) error {
-	err := k.Run("wait", "--for", "delete", "job/kdo-replacer-"+hash)
+	s, err := k.ErrorString("wait", "--for", "delete", "job/kdo-replacer-"+hash)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "kubectl: Error from server (NotFound)") {
+		if strings.HasPrefix(s, "Error from server (NotFound)") {
 			return nil
 		}
 		return err
 	}
 
 	return nil
+}
+
+// WaitAll waits for all replacers to complete (be deleted)
+func WaitAll(k kubectl.CLI, out *output.Interface) error {
+	return pkgerror(out.Do("Waiting for all replacers", func() error {
+		s, err := k.ErrorString("wait", "--for", "delete", "job", "--selector", "kdo-job=1", "--all-namespaces")
+		if err != nil {
+			if strings.HasPrefix(s, "error: no matching resources found") {
+				return nil
+			}
+			return err
+		}
+		return nil
+	}))
+}
+
+// Uninstall deletes all replacer components
+func Uninstall(k kubectl.CLI, out *output.Interface) error {
+	return pkgerror(out.Do("Uninstalling replacer components", func() error {
+		return k.Run("delete", "rolebinding,role,serviceaccount", "--selector", "component=kdo-rbac", "--all-namespaces")
+	}))
 }
