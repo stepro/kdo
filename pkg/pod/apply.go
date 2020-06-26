@@ -47,6 +47,11 @@ func Apply(k kubectl.CLI, hash string, config *Config, build func(pod string) er
 			return err
 		}
 
+		op.Progress("waiting for replacer")
+		if err = replacer.Wait(k, hash); err != nil {
+			return err
+		}
+
 		var manifest object
 		var replicas int
 		op.Progress("determining configuration")

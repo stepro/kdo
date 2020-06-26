@@ -7,8 +7,6 @@
 			"request": "launch",
 			"mode": "auto",
 			"program": "${workspaceFolder}/cli/kdo",
-			"env": {				
-			},
 			"cwd": "${workspaceFolder}",
 			"args": [
 				"-it",

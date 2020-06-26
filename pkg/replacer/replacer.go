@@ -42,8 +42,8 @@ rules:
 - apiGroups: [extensions]
   resources: [deployments,daemonsets,replicasets]
   verbs: [update]
-- apiGroups: [apps]
-  resources: [deployment]
+- apiGroups: [batch]
+  resources: [jobs]
   verbs: [delete]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -58,18 +58,12 @@ roleRef:
   kind: Role
   name: kdo-replacer
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: kdo-replacer-{hash}
 spec:
-  selector:
-    matchLabels:
-      kdo-replacer: {hash}
   template:
-    metadata:
-      labels:
-        kdo-replacer: {hash}
     spec:
       serviceAccountName: kdo-replacer
       containers:
@@ -91,6 +85,7 @@ spec:
         - name: HASH
           value: {hash}
         command: [/bin/bash, -c, {script}]
+      restartPolicy: OnFailure
       terminationGracePeriodSeconds: 0
 `
 
@@ -101,7 +96,7 @@ if [ -n "$($kubectl get pod kdo-$HASH)" ]; then
   $kubectl wait --for=delete pod/kdo-$HASH --timeout=-1s
   $kubectl scale --current-replicas=0 --replicas=$REPLICAS $KIND/$NAME
 fi
-$kubectl delete deployment kdo-replacer-$HASH --wait=false
+$kubectl delete job kdo-replacer-$HASH --wait=false
 `
 
 const serviceScript = `set -ex
@@ -112,7 +107,7 @@ if [ -n "$($kubectl get pod kdo-$HASH)" ]; then
   $kubectl get pod kdo-$HASH -o jsonpath='{.metadata.deletionTimestamp}' -w | read -n1 -s
   $kubectl set selector service $NAME "$SELECTOR"
 fi
-$kubectl delete deployment kdo-replacer-$HASH --wait=false
+$kubectl delete job kdo-replacer-$HASH --wait=false
 `
 
 // Apply creates or updates a replacer for a pod
@@ -143,4 +138,17 @@ func Apply(k kubectl.CLI, kind, name string, replicas int, selector string, hash
 
 		return nil
 	}))
+}
+
+// Wait waits for a replacer associated with a hash to complete (be deleted)
+func Wait(k kubectl.CLI, hash string) error {
+	err := k.Run("wait", "--for", "delete", "job/kdo-replacer-"+hash)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "kubectl: Error from server (NotFound)") {
+			return nil
+		}
+		return err
+	}
+
+	return nil
 }
