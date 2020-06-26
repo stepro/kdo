@@ -9,6 +9,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/stepro/kdo/pkg/kubectl"
 	"github.com/stepro/kdo/pkg/output"
+	"github.com/stepro/kdo/pkg/replacer"
 )
 
 // Config represents configuration settings for a pod
@@ -48,12 +49,19 @@ func Apply(k kubectl.CLI, hash string, config *Config, build func(pod string) er
 
 		var manifest object
 		var replicas int
-		op.Progress("determining baseline configuration")
+		op.Progress("determining configuration")
 		if manifest, replicas, err = baseline(k, config.InheritKind, config.InheritName); err != nil {
 			return err
 		}
-		if replicas > 0 {
 
+		var selector string
+		if config.InheritKind == "service" && config.Replace {
+			op.Progress("determining pod selector")
+			nameValues, err := k.Lines("get", "service", config.InheritName, "-o", "go-template={{range $k, $v := .spec.selector}}{{$k}}={{$v}}\n{{end}}")
+			if err != nil {
+				return err
+			}
+			selector = strings.Join(nameValues, ",")
 		}
 
 		var container string
@@ -174,6 +182,12 @@ func Apply(k kubectl.CLI, hash string, config *Config, build func(pod string) er
 				Delete(k, hash, out)
 			}
 		}()
+
+		if config.Replace {
+			if err = replacer.Apply(k, config.InheritKind, config.InheritName, replicas, selector, hash, out); err != nil {
+				return err
+			}
+		}
 
 		if build != nil {
 			if err = build(name); err != nil {

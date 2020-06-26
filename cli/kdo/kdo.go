@@ -463,16 +463,6 @@ func run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// var selector string
-	// if config.InheritKind == "service" && config.Replace {
-	// 	op.Progress("determining pod selector")
-	// 	nameValues, err := k.Lines("get", "service", config.InheritName, "-o", "go-template={{range $k, $v := .spec.selector}}{{$k}}={{$v}}\n{{end}}")
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	selector = strings.Join(nameValues, ",")
-	// }
-
 	syncRules, err := parseSync(flags.session.sync)
 	if err != nil {
 		return err

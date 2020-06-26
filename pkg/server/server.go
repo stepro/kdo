@@ -77,7 +77,7 @@ spec:
 // Install installs server components
 func Install(k kubectl.CLI, out *output.Interface) error {
 	return pkgerror(out.Do("Installing server components", func(op output.Operation) error {
-		op.Progress("applying manifests")
+		op.Progress("applying manifest")
 		if err := k.Input(strings.NewReader(manifest), "--namespace", "kube-system", "apply", "--filename", "-"); err != nil {
 			return err
 		}
