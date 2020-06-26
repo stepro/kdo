@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -9,7 +10,14 @@ import (
 	"github.com/stepro/kdo/pkg/output"
 )
 
-var manifest = `
+func pkgerror(err error) error {
+	if err != nil {
+		err = fmt.Errorf("server: %v", err)
+	}
+	return err
+}
+
+const manifest = `
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -67,10 +75,10 @@ spec:
 `
 
 // Install installs server components
-func Install(k *kubectl.CLI, out *output.Interface) error {
-	return out.Do("Installing server components", func(op output.Operation) error {
-		op.Progress("applying manifests")
-		if err := k.Input(strings.NewReader(manifest), "--namespace", "kube-system", "apply", "-f", "-"); err != nil {
+func Install(k kubectl.CLI, out *output.Interface) error {
+	return pkgerror(out.Do("Installing server components", func(op output.Operation) error {
+		op.Progress("applying manifest")
+		if err := k.Input(strings.NewReader(manifest), "--namespace", "kube-system", "apply", "--filename", "-"); err != nil {
 			return err
 		}
 
@@ -91,27 +99,27 @@ func Install(k *kubectl.CLI, out *output.Interface) error {
 				if err != nil {
 					return err
 				}
+				op.Progress("%d/%d instances are ready", current, desired)
 				if current == desired {
 					break
 				}
-				op.Progress("%d/%d instances are ready", current, desired)
 			}
 			time.Sleep(1 * time.Second)
 		}
 
 		return nil
-	})
+	}))
 }
 
 // NodePods first ensures server components are installed
 // and then gets a map of nodes to server component pods
-func NodePods(k *kubectl.CLI, out *output.Interface) (map[string]string, error) {
+func NodePods(k kubectl.CLI, out *output.Interface) (map[string]string, error) {
 	var nodePods map[string]string
 
 	pods, err := k.Lines("--namespace", "kube-system", "get", "pod", "--selector", "component=kdo-server",
 		"--output", "go-template={{range .items}}{{.spec.nodeName}} {{.metadata.name}} {{range .status.containerStatuses}}{{.ready}}{{end}}\n{{end}}")
 	if err != nil {
-		return nil, err
+		return nil, pkgerror(err)
 	}
 
 	if len(pods) > 0 {
@@ -135,8 +143,8 @@ func NodePods(k *kubectl.CLI, out *output.Interface) (map[string]string, error) 
 }
 
 // Uninstall uninstalls server components
-func Uninstall(k *kubectl.CLI, out *output.Interface) error {
-	return out.Do("Uninstalling server components", func() error {
+func Uninstall(k kubectl.CLI, out *output.Interface) error {
+	return pkgerror(out.Do("Uninstalling server components", func() error {
 		return k.Run("--namespace", "kube-system", "delete", "daemonset,configmap", "--selector", "component=kdo-server")
-	})
+	}))
 }

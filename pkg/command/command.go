@@ -95,15 +95,15 @@ func Lines(cmd *exec.Cmd, out *output.Interface, verb output.Level) ([]string, e
 	return lines, nil
 }
 
-// EachLine runs a command that sends its lines of
-// standard output as strings to a callback function
+// EachLine runs a command that sends its
+// lines of standard output to a callback
 func EachLine(cmd *exec.Cmd, out *output.Interface, verb output.Level, fn func(line string)) error {
 	cmd.Stdout = output.NewLineWriter(fn)
 
 	return Run(cmd, out, verb)
 }
 
-// Exec "replaces" the current process with a command
+// Exec simulates replacing the current process with a command
 func Exec(cmd *exec.Cmd, out *output.Interface, verb output.Level) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

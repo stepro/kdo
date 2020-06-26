@@ -11,14 +11,14 @@ import (
 
 type tarchive struct {
 	root  string
-	sync  [][2]string
+	sync  []Rule
 	buf   bytes.Buffer
 	tw    *tar.Writer
 	items []string
 	index int
 }
 
-func newTarchive(root string, sync [][2]string, items ...string) io.Reader {
+func newTarchive(root string, sync []Rule, items ...string) io.Reader {
 	a := &tarchive{
 		root: root,
 		sync: sync,
@@ -55,7 +55,7 @@ func (a *tarchive) next() error {
 
 	path := a.items[a.index]
 	for _, rule := range a.sync {
-		if rule[0] != "" && !strings.HasPrefix(path, rule[0]+"/") {
+		if rule.LocalPath != "" && !strings.HasPrefix(path, rule.LocalPath+"/") {
 			continue
 		}
 		file, err := os.Open(name)
@@ -66,7 +66,7 @@ func (a *tarchive) next() error {
 		if err != nil {
 			return err
 		}
-		hdr.Name = rule[1] + "/" + path
+		hdr.Name = rule.RemotePath + "/" + path
 		if err = a.tw.WriteHeader(hdr); err != nil {
 			return err
 		} else if !info.Mode().IsDir() {

@@ -116,9 +116,7 @@ The `--uninstall` flag can be used to explicitly remove any leftover kdo pods ac
 
 ### Scope flag
 
-The scope flag (`--scope`) can be used to change how kdo pods are uniquely named. By default, the local machine's hostname is used.
-
-The scope value is combined with the `image` or `build-dir` parameter and any value of the `--inherit` flag, then SHA-1 hashed to produce the final pod identifier.
+The scope flag (`--scope`) can be used to change how Kubernetes cluster resources are uniquely named. By default, the local machine's hostname is used.
 
 ### Build flags
 
@@ -146,22 +144,23 @@ Flag | Default | Description
 `-A, --inherit-annotations` | `false` | inherit pod annotations
 `--label` | `[]` | inherit, set or remove pod labels in the form `name[=[value]]`
 `--annotate` | `[]` | inherit, set or remove pod annotations in the form `name[=[value]]`
-`--no-lifecycle` | `false` | do not inherit lifecycle configuration
-`--no-probes` | `false` | do not inherit probes configuration
 `-e, --env` | `[]` | set container environment variables in the form `name=value`
-`-R, --replace` | `false` | overlay inherited configuration's workload
+`--no-lifecycle` | `false` | do not inherit container lifecycle
+`--no-probes` | `false` | do not inherit container probes
 
-The `-c, --inherit` flag inherits an existing configuration from a container specification identified in the form `[kind/]name[:container]`, where `kind` is a Kubernetes workload kind (`cronjob`, `daemonset`, `deployment`, `job`, `pod`, `replicaset`, `replicationcontroller` or `statefulset`) or `service` (default is `pod`). If the `kind` is not `pod`, the pod spec is based on the template in the outer workload spec, except in the case of `service`, when it is based on the workload that originally generated the first pod selected by the service. If `container` is not specified, the first container in the pod spec is selected. Init containers are not supported.
+The `-c, --inherit` flag inherits an existing configuration and selects a container in the form `[kind/]name[:container]`, where `kind` is a Kubernetes workload kind (`cronjob`, `daemonset`, `deployment`, `job`, `pod`, `replicaset`, `replicationcontroller` or `statefulset`) or `service` (default is `pod`). If the `kind` is not `pod`, the pod spec is based on the template in the outer workload spec, except in the case of `service`, when it is based on the workload that originally generated the first pod selected by the service. If `container` is not specified, the first container in the pod spec is selected. Init containers are not supported.
 
 By default, when inheriting an existing configuration, pod labels and annotations are *not* inherited to prevent the Kubernetes cluster from misunderstanding the role of the pod (for instance, automatically being added as an instance behind a service). The `--inherit-labels` and/or `--inherit-annotations` flags can be used to override this behavior.
 
 Whether or not labels or annotations are inherited, the final set of label or annotation entries can be customized using the `--label` and `--annotate` flags. If a value is simply in the form `name`, then its entry is inherited. If a value is in the form `name=value`, it adds or overrides any existing entry. Lastly, if a value is in the form `name=`, it removes an entry that may otherwise be inherited.
 
-When inheriting an existing configuration, there are cases when the existing pod lifecycle and probe configuration are not implemented, would cause problems, or are entirely irrelevant for the scenario. The `--no-lifecyle` and `--no-probes` flags can be used to ensure these properties are not inherited.
+The `-e, --env` flags set container environment variables, and in the case of an inherited configuration, override any inherited environment variables.
 
-The `-e, --env` flags set environment variables, and in the case of an inherited configuration, override any inherited environment variables.
+When inheriting an existing configuration, there are cases when the existing container lifecycle and probe configuration are not implemented, would cause problems, or are entirely irrelevant for the scenario. The `--no-lifecyle` and `--no-probes` flags can be used to ensure these properties are not inherited.
 
-The `-R, --replace` flag only applies when the inherited configuration is from the `deployment`, `replicaset`, `replicationcontroller` and `statefulset` workload kinds, or from the `service` kind. For workloads, this flag scales the workload instance to zero for the duration of the command. For services, this flag changes the pod selector to select the kdo pod for the duration of the command.
+### Replace flag
+
+The `-R, --replace` flag overlays an inherited configuration's workload. This flag only applies when the inherited configuration is from the `deployment`, `replicaset`, `replicationcontroller` and `statefulset` workload kinds, or from the `service` kind. For workloads, this flag scales the workload instance to zero for the duration of the command. For services, this flag changes the pod selector to select the kdo pod for the duration of the command.
 
 ### Session flags
 
@@ -207,7 +206,7 @@ When using the `-x, --exec` flag, build, configuration and session flags are ign
 
 The `-k, --prekill` flag can be used with the `-x, --exec` flag to pre-kill existing processes by name that may be running in the container. This requires the `pkill` command in the container, and it sends a SIGKILL to all processes matching the specified flag values.
 
-### Detached pod flags
+### Detach flags
 
 These flags relate to running a pod in the background.
 
@@ -215,6 +214,7 @@ Flag | Default | Description
 ---- | ------- | -----------
 `-d, --detach` | `false` | run pod in the background
 `--delete` | `false` | delete a previously detached pod
+`--delete-all` | `false` | delete all previously detached pods
 
 These flags cannot be combined.
 
