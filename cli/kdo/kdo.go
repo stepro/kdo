@@ -468,6 +468,14 @@ func run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	if flags.replace {
+		switch inheritKind {
+		default:
+			return fmt.Errorf(`resources of kind "%s" cannot be replaced with -R,--replace flag`, inheritKind)
+		case "deployment", "replicaset", "replicationcontroller", "service", "statefulset":
+		}
+	}
+
 	syncRules, err := parseSync(flags.session.sync)
 	if err != nil {
 		return err
