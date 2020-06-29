@@ -26,7 +26,7 @@ import (
 var cmd = &cobra.Command{
 	Short:   "Kdo: deployless development on Kubernetes",
 	Use:     usage,
-	Version: "0.6.0",
+	Version: "0.6.1",
 	Example: examples,
 	RunE:    run,
 }
@@ -465,6 +465,14 @@ func run(cmd *cobra.Command, args []string) error {
 				&flags.build.docker.Options,
 				out, output.LevelVerbose)
 			return imagebuild.Build(k, pod, d, &flags.build.Options, image, buildDir, out)
+		}
+	}
+
+	if flags.replace {
+		switch inheritKind {
+		default:
+			return fmt.Errorf(`resources of kind "%s" cannot be replaced with -R,--replace flag`, inheritKind)
+		case "deployment", "replicaset", "replicationcontroller", "service", "statefulset":
 		}
 	}
 

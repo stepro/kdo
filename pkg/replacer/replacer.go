@@ -32,20 +32,31 @@ metadata:
     component: kdo-rbac
 rules:
 - apiGroups: [""]
-  resources: [pods]
-  verbs: [get, watch]
+  resources:
+  - pods
+  verbs: [get, list, watch]
 - apiGroups: [""]
-  resources: [replicationcontrollers,services]
-  verbs: [update]
+  resources:
+  - replicationcontrollers
+  - replicationcontrollers/scale
+  - services
+  verbs: [get, patch, update]
 - apiGroups: [apps]
-  resources: [deployments,daemonsets,replicasets,statefulsets]
-  verbs: [update]
-- apiGroups: [batch]
-  resources: [cronjobs, jobs]
-  verbs: [update]
+  resources:
+  - deployments
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  - statefulsets
+  - statefulsets/scale
+  verbs: [get, patch, update]
 - apiGroups: [extensions]
-  resources: [deployments,daemonsets,replicasets]
-  verbs: [update]
+  resources:
+  - deployments
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  verbs: [get, patch, update]
 - apiGroups: [batch]
   resources: [jobs]
   verbs: [delete]
