@@ -26,7 +26,7 @@ import (
 var cmd = &cobra.Command{
 	Short:   "Kdo: deployless development on Kubernetes",
 	Use:     usage,
-	Version: "0.6.0",
+	Version: "0.6.1",
 	Example: examples,
 	RunE:    run,
 }
