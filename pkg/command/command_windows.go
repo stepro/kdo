@@ -3,13 +3,10 @@
 package command
 
 import (
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
-
-	"golang.org/x/sys/windows"
 )
 
 func cmdname(cmd *exec.Cmd) string {
@@ -73,15 +70,6 @@ func cmdline(args []string) string {
 func prepare(cmd *exec.Cmd) *exec.Cmd {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
-	}
-
-	if cmd.Stdin != os.Stdin && cmd.Stdout != os.Stdout && cmd.Stderr != os.Stderr {
-		// If all the standard streams have been redirected, there is no
-		// reason for the process to inherit any existing console. In fact,
-		// this is entirely undesirable for long-running background processes.
-		// Therefore, apply the DETACHED_PROCESS creation flag which prevents
-		// the process from inheriting any console from its parent process.
-		cmd.SysProcAttr.CreationFlags |= windows.DETACHED_PROCESS
 	}
 
 	cmd.SysProcAttr.CmdLine = cmdline(cmd.Args)
