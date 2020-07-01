@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -432,6 +433,10 @@ func run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		hash = buildDir
+		if runtime.GOOS == "windows" {
+			// Stabilize hash when the source is case-insensitive
+			hash = strings.ToLower(hash)
+		}
 	}
 	hash = fmt.Sprintf("%s\n%s\n%s", flags.scope, hash, flags.config.inherit)
 	hash = fmt.Sprintf("%x", sha1.Sum([]byte(hash)))[:16]
