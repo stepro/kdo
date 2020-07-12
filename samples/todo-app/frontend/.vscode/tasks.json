@@ -6,11 +6,11 @@
             "command": "kdo",
             "type": "process",
             "args": [
-                "--namespace", "kdo-todo-app",
-                "--inherit", "svc/frontend",
+                "--namespace=kdo-todo-app",
+                "--inherit=svc/frontend",
                 "--replace",
-                "--sync", "/app",
-                "--forward", "3000:80",
+                "--sync=/app",
+                "--forward=3000:80",
                 "--stdin",
                 ".",
                 "sh"
@@ -32,12 +32,12 @@
             "command": "kdo",
             "type": "process",
             "args": [
-                "--namespace", "kdo-todo-app",
-                "--inherit", "svc/frontend",
+                "--namespace=kdo-todo-app",
+                "--inherit=svc/frontend",
                 "--replace",
-                "--sync", "/app",
-                "--forward", "3000:80",
-                "--forward", "9229:9229",
+                "--sync=/app",
+                "--forward=3000:80",
+                "--forward=9229:9229",
                 "--stdin",
                 ".",
                 "node_modules/.bin/nodemon",
@@ -57,5 +57,5 @@
                 }
             }
         }
-   ]
+    ]
 }
