@@ -44,7 +44,7 @@ func Run(cmd *exec.Cmd, out *output.Interface, verb output.Level) error {
 			out.Debug("failed: %s", args)
 		}
 		if stderr != nil {
-			err = fmt.Errorf("%s: %s", label, string(stderr.Bytes()))
+			err = fmt.Errorf("%s: %s", label, stderr.String())
 		} else {
 			err = fmt.Errorf("%s: %v", label, err)
 		}

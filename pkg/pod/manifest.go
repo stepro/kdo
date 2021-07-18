@@ -11,15 +11,6 @@ func (o object) num(k string) int {
 	return int(v.(float64))
 }
 
-func (o object) str(k string) string {
-	v := o[k]
-	if v == nil {
-		return ""
-	}
-
-	return v.(string)
-}
-
 func (o object) obj(k string) object {
 	v := o[k]
 	if v == nil {
@@ -84,6 +75,15 @@ func (o object) withelem(k string, name string, fn func(o object)) object {
 	}
 
 	fn(obj)
+
+	return o
+}
+
+func (o object) apply(src object) object {
+	// TODO: actual JSON merge patch
+	for k, v := range src {
+		o[k] = v
+	}
 
 	return o
 }

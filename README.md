@@ -144,6 +144,8 @@ Flag | Default | Description
 `-A, --inherit-annotations` | `false` | inherit pod annotations
 `--label` | `[]` | inherit, set or remove pod labels in the form `name[=[value]]`
 `--annotate` | `[]` | inherit, set or remove pod annotations in the form `name[=[value]]`
+`--pod-spec | `{...}` | customize overall pod specification
+`--spec | `{...}` | customize overall container specification
 `-e, --env` | `[]` | set container environment variables in the form `name=value`
 `--no-lifecycle` | `false` | do not inherit container lifecycle
 `--no-probes` | `false` | do not inherit container probes
@@ -154,7 +156,9 @@ By default, when inheriting an existing configuration, pod labels and annotation
 
 Whether or not labels or annotations are inherited, the final set of label or annotation entries can be customized using the `--label` and `--annotate` flags. If a value is simply in the form `name`, then its entry is inherited. If a value is in the form `name=value`, it adds or overrides any existing entry. Lastly, if a value is in the form `name=`, it removes an entry that may otherwise be inherited.
 
-The `-e, --env` flags set container environment variables, and in the case of an inherited configuration, override any inherited environment variables.
+The `--pod-spec` and `--spec` flags can be used to customize overall configuration of the pod specification or container specification respectively, using a JSON merge patch, and is applied after any inherited configuration but before more specific configuration through the `-e, --env`, `--no-lifecycle` or `--no-probes` flags.
+
+The `-e, --env` flags set container environment variables, and in the case of an inherited and/or customized configuration, override container environment variables.
 
 When inheriting an existing configuration, there are cases when the existing container lifecycle and probe configuration are not implemented, would cause problems, or are entirely irrelevant for the scenario. The `--no-lifecyle` and `--no-probes` flags can be used to ensure these properties are not inherited.
 

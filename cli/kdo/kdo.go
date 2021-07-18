@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha1"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -27,7 +28,7 @@ import (
 var cmd = &cobra.Command{
 	Short:   "Kdo: deployless development on Kubernetes",
 	Use:     usage,
-	Version: "0.6.1",
+	Version: "0.7.0",
 	Example: examples,
 	RunE:    run,
 }
@@ -95,6 +96,8 @@ var flags struct {
 		inheritAnnotations bool
 		labels             []string
 		annotations        []string
+		podSpec            string
+		spec               string
 		env                []string
 		noLifecycle        bool
 		noProbes           bool
@@ -124,7 +127,7 @@ var flags struct {
 var out *output.Interface
 
 func fatal(err error) {
-	fmt.Fprintf(os.Stderr, fmt.Sprintf("Fatal error: %v", err))
+	fmt.Fprintf(os.Stderr, "Fatal error: %v", err)
 	os.Exit(1)
 }
 
@@ -176,6 +179,10 @@ func init() {
 		"label", nil, "inherit, set or remove pod labels")
 	cmd.Flags().StringArrayVar(&flags.config.annotations,
 		"annotate", nil, "inherit, set or remove pod annotations")
+	cmd.Flags().StringVar(&flags.config.podSpec,
+		"pod-spec", "", "customize overall pod configuration")
+	cmd.Flags().StringVar(&flags.config.spec,
+		"spec", "", "customize overall container configuration")
 	cmd.Flags().StringArrayVarP(&flags.config.env,
 		"env", "e", nil, "set container environment variables")
 	cmd.Flags().BoolVar(&flags.config.noLifecycle,
@@ -462,6 +469,20 @@ func run(cmd *cobra.Command, args []string) error {
 		return pod.Exec(k, hash, container, flags.command.prekill, flags.session.forward, flags.command.stdin, flags.command.tty, command...)
 	}
 
+	var spec map[string]interface{}
+	if flags.config.podSpec != "" {
+		if err = json.Unmarshal([]byte(flags.config.podSpec), &spec); err != nil {
+			return fmt.Errorf(`cannot parse pod spec: %s`, err)
+		}
+	}
+
+	var containerSpec map[string]interface{}
+	if flags.config.spec != "" {
+		if err = json.Unmarshal([]byte(flags.config.spec), &containerSpec); err != nil {
+			return fmt.Errorf(`cannot parse spec: %s`, err)
+		}
+	}
+
 	var build func(pod string) error
 	if buildDir != "" {
 		build = func(pod string) error {
@@ -493,6 +514,8 @@ func run(cmd *cobra.Command, args []string) error {
 		InheritAnnotations: flags.config.inheritAnnotations,
 		Labels:             parseKeyValues(flags.config.labels),
 		Annotations:        parseKeyValues(flags.config.annotations),
+		Spec:               spec,
+		ContainerSpec:      containerSpec,
 		Container:          container,
 		Image:              image,
 		Env:                parseKeyValues(flags.config.env),
@@ -531,9 +554,9 @@ func run(cmd *cobra.Command, args []string) error {
 		defer stop()
 	}
 
-	if len(flags.session.listen) > 0 {
-		// TODO
-	}
+	// TODO
+	// if len(flags.session.listen) > 0 {
+	// }
 
 	var cmdArgs []string
 	if flags.command.stdin && !p.Exited() {

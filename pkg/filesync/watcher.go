@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/fileutils"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 )
 
 type fileinfo struct {
