@@ -85,7 +85,7 @@ func (k *cli) ErrorString(arg ...string) (string, error) {
 	cmd.Stderr = stderr
 
 	if err := command.Run(cmd, k.out, k.verb); err != nil {
-		return string(stderr.Bytes()), err
+		return stderr.String(), err
 	}
 
 	return "", nil

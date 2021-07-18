@@ -163,7 +163,8 @@ func Apply(k kubectl.CLI, kind, name string, replicas int, selector string, hash
 func Wait(k kubectl.CLI, hash string) error {
 	s, err := k.ErrorString("wait", "--for", "delete", "job/kdo-replacer-"+hash)
 	if err != nil {
-		if strings.HasPrefix(s, "Error from server (NotFound)") {
+		if strings.HasPrefix(s, "Error from server (NotFound)") ||
+			strings.HasPrefix(s, "error: no matching resources found") {
 			return nil
 		}
 		return err

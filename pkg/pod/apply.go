@@ -20,6 +20,8 @@ type Config struct {
 	InheritAnnotations bool
 	Labels             map[string]*string
 	Annotations        map[string]*string
+	Spec               map[string]interface{}
+	ContainerSpec      map[string]interface{}
 	Container          string
 	Image              string
 	Env                map[string]*string
@@ -119,6 +121,9 @@ func Apply(k kubectl.CLI, hash string, config *Config, build func(pod string) er
 				}
 			})
 		}).with("spec", func(spec object) {
+			if config.Spec != nil {
+				spec.apply(config.Spec)
+			}
 			if build != nil {
 				spec.appendobj("volumes", map[string]interface{}{
 					"name": "kdo-docker-socket",
@@ -142,6 +147,9 @@ func Apply(k kubectl.CLI, hash string, config *Config, build func(pod string) er
 				})
 			}
 			spec.withelem("containers", container, func(container object) {
+				if config.ContainerSpec != nil {
+					container.apply(config.ContainerSpec)
+				}
 				container["image"] = config.Image
 				if build != nil {
 					container["imagePullPolicy"] = "Never"
