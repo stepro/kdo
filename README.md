@@ -144,8 +144,8 @@ Flag | Default | Description
 `-A, --inherit-annotations` | `false` | inherit pod annotations
 `--label` | `[]` | inherit, set or remove pod labels in the form `name[=[value]]`
 `--annotate` | `[]` | inherit, set or remove pod annotations in the form `name[=[value]]`
-`--pod-spec | `{...}` | customize overall pod specification
-`--spec | `{...}` | customize overall container specification
+`--pod-spec` | `{...}` | customize overall pod specification
+`--spec` | `{...}` | customize overall container specification
 `-e, --env` | `[]` | set container environment variables in the form `name=value`
 `--no-lifecycle` | `false` | do not inherit container lifecycle
 `--no-probes` | `false` | do not inherit container probes
@@ -180,7 +180,7 @@ The `-s, --sync` flag is only valid when using the `build-dir` parameter. It ena
 
 The `-p, --forward` flag enables the local machine to access specific container ports, for example, `--forward 8080:80` will forward local port `8080` to container port `80`.
 
-The `-l, --listen` flag enables code running in the container to access specific localhost ports that are forwarded back to the local machine. This can be used to replace external dependencies, such as data stores, used by the code running in the container, with an alternate endpoint on the local machine. For instance:
+The `-l, --listen` flag (not yet implemented) enables code running in the container to access specific localhost ports that are forwarded back to the local machine. This can be used to replace external dependencies, such as data stores, used by the code running in the container, with an alternate endpoint on the local machine. For instance:
 
 ```
 # Start a local Mongo database that can be accessed at localhost:27017
