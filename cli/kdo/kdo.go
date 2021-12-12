@@ -162,7 +162,7 @@ func init() {
 
 	// Build flags
 	cmd.Flags().StringVar(&flags.build.builder,
-		"builder", "docker", "the builder to use")
+		"builder", "docker", "the image builder to use")
 	cmd.Flags().StringVar(&flags.build.buildctl.path,
 		"buildctl", "buildctl", "path to the buildctl CLI")
 	cmd.Flags().BoolVar(&flags.build.buildctl.Debug,

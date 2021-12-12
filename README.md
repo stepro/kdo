@@ -16,7 +16,7 @@ Kdo can also be used for longer-running connected development sessions where loc
 
 ## Prerequisites and Installation
 
-Kdo requires the `kubectl` CLI to communicate with a Kubernetes cluster and the `docker` CLI to perform dynamic image builds, so first make sure you have these installed and available in your PATH. Then, download the latest [release](https://github.com/stepro/kdo/releases) for your platform and add the `kdo` binary to your PATH.
+Kdo requires the `kubectl` CLI to communicate with a Kubernetes cluster and the `docker` or `buildctl` CLIs to perform dynamic image builds, so first make sure you have these installed and available in your PATH. Then, download the latest [release](https://github.com/stepro/kdo/releases) for your platform and add the `kdo` binary to your PATH.
 
 By default `kdo` utilizes the current `kubectl` context, so point it at the Kubernetes cluster of your choice and you're good to go!
 
@@ -120,10 +120,13 @@ The scope flag (`--scope`) can be used to change how Kubernetes cluster resource
 
 ### Build flags
 
-These flags customize how the `docker` CLI is used when building images.
+These flags customize how the `docker` or `buildctl` CLIs are used when building images.
 
 Flag | Default | Description
 ---- | ------- | -----------
+`--builder` | `docker` | the image builder to use
+`--buildctl` | `buildctl` | path to the buildctl CLI
+`--buildctl-debug` | `false` | the buildctl CLI debug flag
 `--docker` | `docker` | path to the docker CLI
 `--docker-config` | `<empty>` | path to the docker CLI config files
 `--docker-log-level` | `<empty>` | the docker CLI logging level
@@ -131,7 +134,9 @@ Flag | Default | Description
 `--build-arg` | `[]` | build-time variables in the form `name=value`
 `--build-target` | `<empty>` | dockerfile target to build
 
-When the `docker` CLI is invoked, it does not use the default configured Docker daemon. Instead, it uses the kdo server components to directly access the Docker daemon running on a node in the Kubernetes cluster. Therefore, it is theoretically not a requirement that the local machine is actually running Docker, although in most cases (e.g. Docker Desktop) this will be the case. It **is**, however, a requirement that the node on which the kdo pod is scheduled is using Docker for its container runtime and the Docker daemon socket at `/var/run/docker.sock` on the host can be volume mounted into the pod.
+The `buildkit` builder should be chosen when the Kubernetes cluster nodes use containerd to run containers. It requires the `buildctl` CLI to be installed locally which is configured to communicate with a buildkitd daemon run by the kdo server components, which in turn is configured to communicate with the containerd daemon.
+
+The `docker` builder should be chosen when the Kubernetes cluster nodes use Docker to run containers. It requires the `docker` CLI to be installed locally which is configured to communicate with the Docker daemon running on a node in the Kubernetes cluster.
 
 ### Configuration flags
 
