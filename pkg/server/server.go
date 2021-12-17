@@ -25,10 +25,19 @@ metadata:
   labels:
     component: kdo-server
 data:
-  docker-daemon.sh: |-
+  buildkitd.toml: |-
+    [worker.containerd]
+      namespace = "k8s.io"
+  entrypoint.sh: |-
     #!/bin/sh
-    apk add --no-cache socat
-    exec socat -d tcp4-listen:2375,fork UNIX-CONNECT:/var/run/docker.sock
+    if [ -e "/run/containerd/containerd.sock" ]; then
+      exec buildkitd --addr tcp://0.0.0.0:2375 \
+        --root /var/lib/kdo/buildkit \
+        --oci-worker false --containerd-worker true
+    elif [ -e "/run/docker.sock" ]; then
+      apk add --no-cache socat
+      exec socat -d tcp4-listen:2375,fork UNIX-CONNECT:/run/docker.sock
+    fi
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -46,29 +55,73 @@ spec:
         component: kdo-server
     spec:
       nodeSelector:
-        beta.kubernetes.io/os: linux	
+        kubernetes.io/os: linux
       volumes:
+      - name: host-run-containerd
+        hostPath:
+          type: DirectoryOrCreate
+          path: /run/containerd
+      - name: host-run-docker-sock
+        hostPath:
+          # type: SocketOrCreate
+          path: /run/docker.sock
+      - name: host-tmp
+        hostPath:
+          type: Directory
+          path: /tmp
+      - name: host-var-lib-buildkit
+        hostPath:
+          type: DirectoryOrCreate
+          path: /var/lib/kdo/buildkit
+      - name: host-var-lib-containerd
+        hostPath:
+          type: DirectoryOrCreate
+          path: /var/lib/containerd
+      - name: host-var-log
+        hostPath:
+          type: Directory
+          path: /var/log
       - name: config
         configMap:
           name: kdo-server
           items:
-          - key: docker-daemon.sh
-            path: docker-daemon.sh
+          - key: buildkitd.toml
+            path: buildkitd.toml
+            mode: 0644
+          - key: entrypoint.sh
+            path: entrypoint.sh
             mode: 0777
-      - name: docker-socket
-        hostPath:
-          path: /var/run/docker.sock
       containers:
-      - name: docker-daemon
-        image: alpine:3
+      - name: kdo-server
+        image: moby/buildkit
         volumeMounts:
+        - name: host-run-containerd
+          mountPath: /run/containerd
+          mountPropagation: Bidirectional
+        - name: host-run-docker-sock
+          mountPath: /run/docker.sock
+        - name: host-tmp
+          mountPath: /tmp
+          mountPropagation: Bidirectional
+        - name: host-var-lib-buildkit
+          mountPath: /var/lib/kdo/buildkit
+          mountPropagation: Bidirectional
+        - name: host-var-lib-containerd
+          mountPath: /var/lib/containerd
+          mountPropagation: Bidirectional
+        - name: host-var-log
+          mountPath: /var/log
+          mountPropagation: Bidirectional
         - name: config
-          subPath: docker-daemon.sh
-          mountPath: /docker-daemon.sh
-        - name: docker-socket
-          mountPath: /var/run/docker.sock
+          subPath: buildkitd.toml
+          mountPath: /etc/buildkit/buildkitd.toml
+        - name: config
+          subPath: entrypoint.sh
+          mountPath: /entrypoint.sh
+        securityContext:
+          privileged: true
         command:
-        - /docker-daemon.sh
+        - /entrypoint.sh
         readinessProbe:
           tcpSocket:
             port: 2375

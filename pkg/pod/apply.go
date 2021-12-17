@@ -126,23 +126,43 @@ func Apply(k kubectl.CLI, hash string, config *Config, build func(pod string) er
 			}
 			if build != nil {
 				spec.appendobj("volumes", map[string]interface{}{
-					"name": "kdo-docker-socket",
+					"name": "kdo-host-run-containerd",
 					"hostPath": map[string]interface{}{
-						"path": "/var/run/docker.sock",
+						"path": "/run/containerd",
+					},
+				}).appendobj("volumes", map[string]interface{}{
+					"name": "kdo-host-run-docker-sock",
+					"hostPath": map[string]interface{}{
+						// "type": "SocketOrCreate",
+						"path": "/run/docker.sock",
 					},
 				}).appendobj("initContainers", map[string]interface{}{
 					"name":  "kdo-await-image-build",
-					"image": "docker:19.03",
+					"image": "docker",
 					"volumeMounts": []map[string]interface{}{
 						{
-							"name":      "kdo-docker-socket",
-							"mountPath": "/var/run/docker.sock",
+							"name":      "kdo-host-run-containerd",
+							"mountPath": "/run/containerd",
+						},
+						{
+							"name":      "kdo-host-run-docker-sock",
+							"mountPath": "/run/docker.sock",
 						},
 					},
 					"command": []string{
 						"/bin/sh",
 						"-c",
-						`while [ -z "$(docker images ` + config.Image + ` --format '{{.Repository}}')" ]; do sleep 1; done`,
+						`if [ -S /run/containerd/containerd.sock ]; then
+                          apk add curl
+                          curl -L https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.22.0/crictl-v1.22.0-linux-amd64.tar.gz | tar -xzvf -
+                          while [ -z "$(/crictl --runtime-endpoint unix:///run/containerd/containerd.sock images | grep '` + strings.Replace(config.Image, ":", "\\s*", 1) + `')" ]; do
+						  	sleep 1
+						  done
+                        elif [ -S /var/run/docker.sock ]; then
+                          while [ -z "$(docker images ` + config.Image + ` --format '{{.Repository}}')" ]; do
+						  	sleep 1
+						  done
+                        fi`,
 					},
 				})
 			}

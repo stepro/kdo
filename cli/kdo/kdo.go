@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/stepro/kdo/pkg/buildctl"
 	"github.com/stepro/kdo/pkg/docker"
 	"github.com/stepro/kdo/pkg/filesync"
 	"github.com/stepro/kdo/pkg/imagebuild"
@@ -28,7 +29,7 @@ import (
 var cmd = &cobra.Command{
 	Short:   "Kdo: deployless development on Kubernetes",
 	Use:     usage,
-	Version: "0.7.0",
+	Version: "0.8.0",
 	Example: examples,
 	RunE:    run,
 }
@@ -84,6 +85,11 @@ var flags struct {
 	uninstall bool
 	scope     string
 	build     struct {
+		builder  string
+		buildctl struct {
+			path string
+			buildctl.Options
+		}
 		docker struct {
 			path string
 			docker.Options
@@ -155,6 +161,12 @@ func init() {
 		"scope", "", "scoping identifier for cluster resources")
 
 	// Build flags
+	cmd.Flags().StringVar(&flags.build.builder,
+		"builder", "docker", "the image builder to use")
+	cmd.Flags().StringVar(&flags.build.buildctl.path,
+		"buildctl", "buildctl", "path to the buildctl CLI")
+	cmd.Flags().BoolVar(&flags.build.buildctl.Debug,
+		"buildctl-debug", false, "the buildctl CLI debug flag")
 	cmd.Flags().StringVar(&flags.build.docker.path,
 		"docker", "docker", "path to the docker CLI")
 	cmd.Flags().StringVar(&flags.build.docker.Config,
@@ -448,7 +460,7 @@ func run(cmd *cobra.Command, args []string) error {
 	hash = fmt.Sprintf("%s\n%s\n%s", flags.scope, hash, flags.config.inherit)
 	hash = fmt.Sprintf("%x", sha1.Sum([]byte(hash)))[:16]
 	if buildDir != "" {
-		image = fmt.Sprintf("kdo-%s:%d", hash, time.Now().UnixNano())
+		image = fmt.Sprintf("dev.local/kdo-%s:%d", hash, time.Now().UnixNano())
 	}
 	command := args[1:]
 
@@ -485,12 +497,22 @@ func run(cmd *cobra.Command, args []string) error {
 
 	var build func(pod string) error
 	if buildDir != "" {
-		build = func(pod string) error {
-			d := docker.NewCLI(
-				flags.build.docker.path,
-				&flags.build.docker.Options,
-				out, output.LevelVerbose)
-			return imagebuild.Build(k, pod, d, &flags.build.Options, image, buildDir, out)
+		if flags.build.builder == "buildkit" {
+			build = func(pod string) error {
+				bc := buildctl.NewCLI(
+					flags.build.buildctl.path,
+					&flags.build.buildctl.Options,
+					out, output.LevelVerbose)
+				return imagebuild.Build(k, pod, bc, nil, &flags.build.Options, image, buildDir, out)
+			}
+		} else if flags.build.builder == "docker" {
+			build = func(pod string) error {
+				d := docker.NewCLI(
+					flags.build.docker.path,
+					&flags.build.docker.Options,
+					out, output.LevelVerbose)
+				return imagebuild.Build(k, pod, nil, d, &flags.build.Options, image, buildDir, out)
+			}
 		}
 	}
 
