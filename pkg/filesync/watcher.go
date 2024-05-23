@@ -4,8 +4,6 @@ import (
 	"os"
 	"sort"
 	"time"
-	"path/filepath"
-	"strings"
 
 	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 	"github.com/moby/patternmatcher"
