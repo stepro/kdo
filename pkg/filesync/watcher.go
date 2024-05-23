@@ -4,8 +4,9 @@ import (
 	"os"
 	"sort"
 	"time"
+	"path/filepath"
+	"strings"
 
-	"github.com/docker/docker/pkg/fileutils"
 	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 )
 
@@ -17,7 +18,7 @@ type fileinfo struct {
 
 const interval = 200 * time.Millisecond
 
-func find2(root string, files []fileinfo, dir string, pm *fileutils.PatternMatcher) []fileinfo {
+func find2(root string, files []fileinfo, dir string, pm *PatternMatcher) []fileinfo {
 	file, err := os.Open(root + "/" + dir)
 	if err != nil {
 		return nil
@@ -53,7 +54,7 @@ func (a fileinfos) Len() int           { return len(a) }
 func (a fileinfos) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a fileinfos) Less(i, j int) bool { return a[i].path < a[j].path }
 
-func find(root string, pm *fileutils.PatternMatcher) fileinfos {
+func find(root string, pm *PatternMatcher) fileinfos {
 	var files fileinfos
 	files = find2(root, files, "", pm)
 	if files != nil {
@@ -102,7 +103,7 @@ func start(dir string, fn func(added []string, updated []string, deleted []strin
 		}
 	}
 
-	pm, err := fileutils.NewPatternMatcher(patterns)
+	pm, err := NewPatternMatcher(patterns)
 	if err != nil {
 		return err
 	}
@@ -126,4 +127,38 @@ func start(dir string, fn func(added []string, updated []string, deleted []strin
 	}()
 
 	return nil
+}
+
+// PatternMatcher is a custom implementation to match file patterns
+type PatternMatcher struct {
+	patterns []string
+}
+
+// NewPatternMatcher creates a new PatternMatcher with the given patterns
+func NewPatternMatcher(patterns []string) (*PatternMatcher, error) {
+	return &PatternMatcher{patterns: patterns}, nil
+}
+
+// Matches checks if the given path matches any of the patterns
+func (pm *PatternMatcher) Matches(path string) (bool, error) {
+	for _, pattern := range pm.patterns {
+		matched, err := filepath.Match(pattern, path)
+		if err != nil {
+			return false, err
+		}
+		if matched {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// Exclusions checks if there are any exclusion patterns
+func (pm *PatternMatcher) Exclusions() bool {
+	for _, pattern := range pm.patterns {
+		if strings.HasPrefix(pattern, "!") {
+			return true
+		}
+	}
+	return false
 }
