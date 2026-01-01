@@ -5,7 +5,7 @@
         "nodemon": "^2.0.20"
     },
     "dependencies": {
-        "express": "^4.21.2",
+        "express": "^4.22.1",
         "redis": "^3.1.1"
     },
     "main": "server.js",
